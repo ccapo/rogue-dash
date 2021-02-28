@@ -1,15 +1,15 @@
 from map.tile import Tile
+from map.room import column_room
 
 class Map:
   def __init__(self, width, height):
     self.width = width
     self.height = height
+    self.available_tiles = []
     self.tiles = self.initialize_tiles()
 
   def initialize_tiles(self):
     tiles = [[Tile(False) for y in range(self.height)] for x in range(self.width)]
-
-    tiles = self.column_room(tiles)
 
     for x in range(self.width):
       tiles[x][0].blocked = True
@@ -23,87 +23,7 @@ class Map:
       tiles[self.width - 1][y].blocked = True
       tiles[self.width - 1][y].block_sight = True
 
-    return tiles
-
-  def column_room(self, tiles):
-    cx = int(self.width / 2)
-    cy = int(self.height / 2)
-
-    ax1 = cx - 10
-    ax2 = ax1 + 1
-    ay1 = cy
-    ay2 = ay1 + 1
-
-    for i in range(4):
-      tiles[ax1][ay1].blocked = True
-      tiles[ax1][ay1].block_sight = True
-      tiles[ax2][ay1].blocked = True
-      tiles[ax2][ay1].block_sight = True
-
-      tiles[ax1][ay2].blocked = True
-      tiles[ax1][ay2].block_sight = True
-      tiles[ax2][ay2].blocked = True
-      tiles[ax2][ay2].block_sight = True
-
-      ay1 = ay1 - 6
-      ay2 = ay1 + 1
-
-    ax1 = cx - 10
-    ax2 = ax1 + 1
-    ay1 = cy + 6
-    ay2 = ay1 + 1
-
-    for i in range(3):
-      tiles[ax1][ay1].blocked = True
-      tiles[ax1][ay1].block_sight = True
-      tiles[ax2][ay1].blocked = True
-      tiles[ax2][ay1].block_sight = True
-
-      tiles[ax1][ay2].blocked = True
-      tiles[ax1][ay2].block_sight = True
-      tiles[ax2][ay2].blocked = True
-      tiles[ax2][ay2].block_sight = True
-
-      ay1 = ay1 + 6
-      ay2 = ay1 + 1
-
-    ax1 = cx + 4
-    ax2 = ax1 + 1
-    ay1 = cy
-    ay2 = ay1 + 1
-
-    for i in range(4):
-      tiles[ax1][ay1].blocked = True
-      tiles[ax1][ay1].block_sight = True
-      tiles[ax2][ay1].blocked = True
-      tiles[ax2][ay1].block_sight = True
-
-      tiles[ax1][ay2].blocked = True
-      tiles[ax1][ay2].block_sight = True
-      tiles[ax2][ay2].blocked = True
-      tiles[ax2][ay2].block_sight = True
-
-      ay1 = ay1 - 6
-      ay2 = ay1 + 1
-
-    ax1 = cx + 4
-    ax2 = ax1 + 1
-    ay1 = cy + 6
-    ay2 = ay1 + 1
-
-    for i in range(3):
-      tiles[ax1][ay1].blocked = True
-      tiles[ax1][ay1].block_sight = True
-      tiles[ax2][ay1].blocked = True
-      tiles[ax2][ay1].block_sight = True
-
-      tiles[ax1][ay2].blocked = True
-      tiles[ax1][ay2].block_sight = True
-      tiles[ax2][ay2].blocked = True
-      tiles[ax2][ay2].block_sight = True
-
-      ay1 = ay1 + 6
-      ay2 = ay1 + 1
+    #tiles = column_room(self.width, self.height, tiles)
 
     return tiles
 

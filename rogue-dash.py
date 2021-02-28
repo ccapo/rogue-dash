@@ -3,6 +3,7 @@ import tcod as libtcod
 from entity import Entity
 from handlers import handle_keys
 from map.map import Map
+from client import upload_score
 from render import clear_all, render_all
 
 def main():
@@ -51,6 +52,8 @@ def main():
         player.move(dx, dy)
 
     if exit:
+      scorecard = {'0x0A': 1, '0x0B': 2, '0x0C': 3}
+      upload_score(scorecard)
       return True
 
     if fullscreen:
