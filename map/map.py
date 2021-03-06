@@ -23,7 +23,7 @@ class Map:
       tiles[self.width - 1][y].blocked = True
       tiles[self.width - 1][y].block_sight = True
 
-    #tiles = column_room(self.width, self.height, tiles)
+    tiles = column_room(self.width, self.height, tiles)
 
     return tiles
 
