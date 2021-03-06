@@ -1408,6 +1408,7 @@ class Engine:
     
     # Create map
     self.map = Map(self.map_width, self.map_height)
+    self.map.create_room(1)
     
     # Define input handlers
     self.key = libtcod.Key()
