@@ -9,13 +9,23 @@ from render import clear_all, render_all
 def main():
   engine = Engine()
 
+  counter = 0
+
   while not libtcod.console_is_window_closed():
     libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS, engine.key, engine.mouse)
 
-    render_all(engine.con, engine.entities, engine.map, engine.screen_width, engine.screen_height, engine.colours)
+    # Update progress offset
+    counter += 1
+    if counter >= engine.fps_max:
+      counter = 0
+      engine.map.progress_yoffset -= 1
+      if engine.map.progress_yoffset <= 0:
+        engine.map.progress_yoffset = 0
+
+    render_all(engine.con, engine.panel, engine.entities, engine.player, engine.map, engine.message_log, engine.screen_width, engine.screen_height, engine.bar_width, engine.panel_height, engine.panel_yoffset, engine.colours)
     libtcod.console_flush()
 
-    clear_all(engine.con, engine.entities)
+    clear_all(engine.con, engine.map, engine.entities)
 
     action = handle_keys(engine.key)
 
@@ -29,12 +39,13 @@ def main():
         engine.player.move(dx, dy)
 
     if exit:
-      scorecard = {'0x0A': 1, '0x0B': 2, '0x0C': 3}
-      upload_score(scorecard)
-      return True
+      break
 
     if fullscreen:
       libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
+
+  # Upload score to game server
+  upload_score(engine.scorecard)
 
 if __name__ == '__main__':
   main()

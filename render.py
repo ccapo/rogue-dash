@@ -1,30 +1,64 @@
 import tcod as libtcod
 
-def render_all(con, entities, game_map, screen_width, screen_height, colors):
-  # Draw all the tiles in the game map
-  for y in range(game_map.height):
-    for x in range(game_map.width):
-      wall = game_map.tiles[x][y].block_sight
+def render_bar(panel, x, y, total_width, name, value, maximum, bar_colour, back_colour):
+  bar_width = int(float(value) / maximum * total_width)
+
+  libtcod.console_set_default_background(panel, back_colour)
+  libtcod.console_rect(panel, x, y, total_width, 1, False, libtcod.BKGND_SCREEN)
+
+  libtcod.console_set_default_background(panel, bar_colour)
+  if bar_width > 0:
+    libtcod.console_rect(panel, x, y, bar_width, 1, False, libtcod.BKGND_SCREEN)
+
+  libtcod.console_set_default_foreground(panel, libtcod.white)
+  libtcod.console_print_ex(panel, int(x + total_width / 2), y, libtcod.BKGND_NONE, libtcod.CENTER, '{0}: {1}/{2}'.format(name, value, maximum))
+
+def render_all(con, panel, entities, player, map, message_log, screen_width, screen_height, bar_width, panel_height, panel_y, colours):
+  # Update camera offset
+  map.move_camera(map.progress_yoffset)
+
+  # Draw all the tiles visble from the camera
+  for y in range(map.camera_yoffset, map.camera_height + map.camera_yoffset + 1):
+    for x in range(map.camera_width):
+      wall = map.tiles[x][y].block_sight
 
       if wall:
-        libtcod.console_set_char_background(con, x, y, colors.get('dark_wall'), libtcod.BKGND_SET)
+        libtcod.console_set_char_background(con, x, y - map.camera_yoffset, colours.get('dark_wall'), libtcod.BKGND_SET)
       else:
-        libtcod.console_set_char_background(con, x, y, colors.get('dark_ground'), libtcod.BKGND_SET)
+        libtcod.console_set_char_background(con, x, y - map.camera_yoffset, colours.get('dark_ground'), libtcod.BKGND_SET)
 
-    # Draw all entities in the list
-    for entity in entities:
-        draw_entity(con, entity)
+  # Draw all entities in the list
+  for entity in entities:
+    draw_entity(con, map, entity)
 
-    libtcod.console_blit(con, 0, 0, screen_width, screen_height, 0, 0, 0)
+  libtcod.console_blit(con, 0, 0, screen_width, screen_height, 0, 0, 0)
 
-def clear_all(con, entities):
-    for entity in entities:
-        clear_entity(con, entity)
+  libtcod.console_set_default_background(panel, libtcod.black)
+  libtcod.console_clear(panel)
 
-def draw_entity(con, entity):
-    libtcod.console_set_default_foreground(con, entity.color)
-    libtcod.console_put_char(con, entity.x, entity.y, entity.sym, libtcod.BKGND_NONE)
+  # Print the game messages, one line at a time
+  y = 1
+  for message in message_log.messages:
+    libtcod.console_set_default_foreground(panel, message.colour)
+    libtcod.console_print_ex(panel, message_log.x, y, libtcod.BKGND_NONE, libtcod.LEFT, message.text)
+    y += 1
 
-def clear_entity(con, entity):
-    # erase the character that represents this object
-    libtcod.console_put_char(con, entity.x, entity.y, ' ', libtcod.BKGND_NONE)
+  render_bar(panel, 1, 1, bar_width, 'HP', player.hp, player.hpmax, libtcod.light_red, libtcod.darker_red)
+
+  #libtcod.console_set_default_foreground(panel, libtcod.light_gray)
+  #libtcod.console_print_ex(panel, 1, 0, libtcod.BKGND_NONE, libtcod.LEFT,
+  #                         get_names_under_mouse(mouse, entities, fov_map))
+
+  libtcod.console_blit(panel, 0, 0, screen_width, panel_height, 0, 0, panel_y)
+
+def clear_all(con, map, entities):
+  for entity in entities:
+    clear_entity(con, map, entity)
+
+def draw_entity(con, map, entity):
+  libtcod.console_set_default_foreground(con, entity.colour)
+  libtcod.console_put_char(con, entity.x, entity.y - map.camera_yoffset, entity.sym, libtcod.BKGND_NONE)
+
+def clear_entity(con, map, entity):
+  # erase the character that represents this object
+  libtcod.console_put_char(con, entity.x, entity.y - map.camera_yoffset, ' ', libtcod.BKGND_NONE)

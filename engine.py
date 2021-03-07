@@ -3,16 +3,38 @@ import tcod as libtcod
 from constants import CharType
 from entity import Entity
 from map.map import Map
+from message import Message, MessageLog
 
 class Engine:
-  def __init__(self, screen_width = 80, screen_height = 50):
+  def __init__(self, screen_width = 60, screen_height = 40):
     # Define screen width and height
     self.screen_width = screen_width
     self.screen_height = screen_height
 
+    # Define height of panel
+    self.panel_height = 7
+    self.message_log = None
+
     # Define map width and height
     self.map_width = screen_width
-    self.map_height = screen_height - 5
+    self.map_height = 3*screen_height
+
+    # Define camera width, height and position
+    self.camera_width = self.screen_width
+    self.camera_height = self.screen_height - self.panel_height
+
+    # Define other parameters
+    self.fps_max = 24
+    self.bar_width = 15
+    self.panel_yoffset = self.screen_height - self.panel_height
+    self.message_xoffset = self.bar_width + 2
+    self.message_width = self.screen_width - self.bar_width - 2
+    self.message_height = self.panel_height - 1
+    self.room_max_size = 8
+    self.room_min_size = 4
+    self.max_rooms = 60
+    self.max_monsters_per_room = 3
+    self.max_items_per_room = 2
 
     # Default font path and number of rows and columns
     self.font_path = 'data/fonts/arial16x16-ext4.png'
@@ -24,6 +46,9 @@ class Engine:
       'dark_wall': libtcod.Color(0, 0, 100),
       'dark_ground': libtcod.Color(50, 50, 150)
     }
+
+    # Define scorecard
+    self.scorecard = {'0x0A': 1, '0x0B': 2, '0x0C': 3}
 
     # Load font
     libtcod.console_set_custom_font(self.font_path, libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD, self.font_ncols, self.font_nrows)
@@ -1396,19 +1421,26 @@ class Engine:
     x += 1; libtcod.console_map_ascii_code_to_font(int(CharType.SPRITE_1464), x, y)
 
     # Define player and other entities
-    self.player = Entity(int(self.screen_width / 2), int(self.screen_height / 2), CharType.PLAYER_RIGHT, libtcod.white)
-    self.npc = Entity(int(self.screen_width / 2 - 5), int(self.screen_height / 2), CharType.KEEPER, libtcod.white)
-    self.entities = [self.npc, self.player]
+    self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white)
+    #self.npc = Entity(int(self.screen_width / 2 - 5), int(self.screen_height / 2), CharType.KEEPER, libtcod.white)
+    self.entities = [self.player]
 
     # Initialize the root console
     libtcod.console_init_root(self.screen_width, self.screen_height, 'rogue-dash (2021 7DRL)', False)
 
-    # Create console
+    # Set maximum framerate
+    libtcod.sys_set_fps(self.fps_max)
+
+    self.message_log = MessageLog(self.message_xoffset, self.message_width, self.message_height)
+    self.message_log.add_message(Message('Welcome to rogue-dash!', libtcod.yellow))
+
+    # Create consoles
     self.con = libtcod.console_new(self.screen_width, self.screen_height)
+    self.panel = libtcod.console_new(self.screen_width, self.panel_height)
     
     # Create map
-    self.map = Map(self.map_width, self.map_height)
-    self.map.create_room(1)
+    self.map = Map(self.map_width, self.map_height, self.camera_width, self.camera_height)
+    self.map.generate(self.max_rooms, self.room_min_size, self.room_max_size, self.max_monsters_per_room, self.max_items_per_room, self.player, self.entities)
     
     # Define input handlers
     self.key = libtcod.Key()
