@@ -1,3 +1,5 @@
+import sys
+import warnings
 import tcod as libtcod
 
 from engine import Engine
@@ -6,18 +8,20 @@ from handlers import handle_keys
 from client import upload_score
 from render import clear_all, render_all
 
+if not sys.warnoptions:
+  warnings.simplefilter("ignore")  # Prevent flood of deprecation warnings.
+
 def main():
   engine = Engine()
-
-  counter = 0
+  elapsed_t = 0.0
 
   while not libtcod.console_is_window_closed():
     libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS, engine.key, engine.mouse)
 
     # Update progress offset
-    counter += 1
-    if counter >= engine.fps_max:
-      counter = 0
+    elapsed_t += libtcod.sys_get_last_frame_length()
+    if elapsed_t > engine.delay_threshold():
+      elapsed_t = 0.0
       engine.map.progress_yoffset -= 1
       if engine.map.progress_yoffset <= 0:
         engine.map.progress_yoffset = 0

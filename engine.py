@@ -23,16 +23,25 @@ class Engine:
     self.camera_width = self.screen_width
     self.camera_height = self.screen_height - self.panel_height
 
-    # Define other parameters
-    self.fps_max = 24
+    # Define stage number
+    self.stage = 1
+
+    # Define auto-scrolling rate
+    self.delay_threshold_min = 0.5
+    self.delay_threshold_max = 4.0
+    self.delay_threshold_delta = 0.5
+
+    # Define message log and status panel
     self.bar_width = 15
     self.panel_yoffset = self.screen_height - self.panel_height
     self.message_xoffset = self.bar_width + 2
     self.message_width = self.screen_width - self.bar_width - 2
     self.message_height = self.panel_height - 1
+
+    # Define map generation parameters
     self.room_max_size = 8
     self.room_min_size = 4
-    self.max_rooms = 60
+    self.max_rooms = 40
     self.max_monsters_per_room = 3
     self.max_items_per_room = 2
 
@@ -1428,9 +1437,6 @@ class Engine:
     # Initialize the root console
     libtcod.console_init_root(self.screen_width, self.screen_height, 'rogue-dash (2021 7DRL)', False)
 
-    # Set maximum framerate
-    libtcod.sys_set_fps(self.fps_max)
-
     self.message_log = MessageLog(self.message_xoffset, self.message_width, self.message_height)
     self.message_log.add_message(Message('Welcome to rogue-dash!', libtcod.yellow))
 
@@ -1445,3 +1451,6 @@ class Engine:
     # Define input handlers
     self.key = libtcod.Key()
     self.mouse = libtcod.Mouse()
+
+  def delay_threshold(self):
+    return max(self.delay_threshold_min, self.delay_threshold_max - (self.stage - 1) * self.delay_threshold_delta)
