@@ -4,10 +4,10 @@ from map.tile import Tile
 from map.rectangle import Rectangle
 
 class Map:
-  def __init__(self, width, height, camera_width, camera_height):
+  def __init__(self, width, height, camera_height):
     self.width = width
     self.height = height
-    self.camera_width = camera_width
+    self.camera_width = width
     self.camera_height = camera_height
     self.camera_yoffset = 0
     self.progress_yoffset = self.height - self.camera_height//2 - 1
@@ -52,29 +52,35 @@ class Map:
           # this is the first room, where the player starts
           player.x = new_x
           player.y = new_y
-        else:
-          # all rooms after the first:
-          # connect it to the previous room with a tunnel
-
-          # center coordinates of previous room
-          (prev_x, prev_y) = rooms[num_rooms - 1].center()
-
-          # flip a coin (random number that is either 0 or 1)
-          if randint(0, 1) == 1:
-            # first move horizontally, then vertically
-            self.create_h_tunnel(prev_x, new_x, prev_y)
-            self.create_v_tunnel(prev_y, new_y, new_x)
-          else:
-            # first move vertically, then horizontally
-            self.create_v_tunnel(prev_y, new_y, prev_x)
-            self.create_h_tunnel(prev_x, new_x, new_y)
-
-          # Add creatures to room
-          #self.place_entities(new_room, entities, max_monsters_per_room, max_items_per_room)
 
         # finally, append the new room to the list
         rooms.append(new_room)
         num_rooms += 1
+    print(num_rooms)
+    rooms_sorted = sorted(rooms)
+    for i in range(len(rooms_sorted) - 1):
+      # connect it to the previous room with a tunnel
+      r = rooms_sorted[i]
+      s = rooms_sorted[i + 1]
+
+      # center coordinates of next room
+      (next_x, next_y) = s.center()
+
+      # center coordinates of previous room
+      (prev_x, prev_y) = r.center()
+
+      # flip a coin (random number that is either 0 or 1)
+      #if randint(0, 1) == 1:
+        # first move horizontally, then vertically
+        #self.create_h_tunnel(prev_x, next_x, prev_y)
+        #self.create_v_tunnel(prev_y, next_y, next_x)
+      #else:
+      # first move vertically, then horizontally
+      self.create_v_tunnel(prev_y, next_y, prev_x)
+      self.create_h_tunnel(prev_x, next_x, next_y)
+
+      # Add creatures to room
+      #self.place_entities(r, entities, max_monsters_per_room, max_items_per_room)
 
   def create_room(self, room):
     # go through the tiles in the rectangle and make them passable

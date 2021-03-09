@@ -1,12 +1,14 @@
 import tcod as libtcod
 
+from random import randint
 from constants import CharType
 from entity import Entity
-from map.map import Map
+#from map.map import Map
+from map.dungeon import Dungeon
 from message import Message, MessageLog
 
 class Engine:
-  def __init__(self, screen_width = 60, screen_height = 40):
+  def __init__(self, screen_width = 50, screen_height = 40):
     # Define screen width and height
     self.screen_width = screen_width
     self.screen_height = screen_height
@@ -41,9 +43,10 @@ class Engine:
     # Define map generation parameters
     self.room_max_size = 8
     self.room_min_size = 4
-    self.max_rooms = 40
+    self.max_rooms = 80
     self.max_monsters_per_room = 3
     self.max_items_per_room = 2
+    self.max_equip_per_room = 1
 
     # Default font path and number of rows and columns
     self.font_path = 'data/fonts/arial16x16-ext4.png'
@@ -1445,8 +1448,11 @@ class Engine:
     self.panel = libtcod.console_new(self.screen_width, self.panel_height)
     
     # Create map
-    self.map = Map(self.map_width, self.map_height, self.camera_width, self.camera_height)
-    self.map.generate(self.max_rooms, self.room_min_size, self.room_max_size, self.max_monsters_per_room, self.max_items_per_room, self.player, self.entities)
+    #self.old_map = Map(self.map_width, self.map_height, self.camera_height)
+    #self.old_map.generate(self.max_rooms, self.room_min_size, self.room_max_size, self.max_monsters_per_room, self.max_items_per_room, self.player, self.entities)
+
+    self.map = Dungeon(self.map_width, self.map_height, self.camera_height)
+    self.map.generate(self.player)
     
     # Define input handlers
     self.key = libtcod.Key()

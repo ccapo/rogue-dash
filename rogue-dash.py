@@ -13,7 +13,7 @@ if not sys.warnoptions:
 
 def main():
   engine = Engine()
-  elapsed_t = 0.0
+  elapsed_t = -1.0
 
   while not libtcod.console_is_window_closed():
     libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS, engine.key, engine.mouse)
