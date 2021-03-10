@@ -1,5 +1,32 @@
 import enum
 
+class ItemType(enum.IntEnum):
+  # POTIONS
+  POTION_HEAL = 1
+  POTION_ATK = 2
+  POTION_DEF = 3
+  POTION_UNK = 4
+
+  # RINGS
+  RING_ATK = 5
+  RING_DEF = 6
+  RING_SPD = 7
+
+  # SWORDS
+  SWORD_BRONZE = 8
+  SWORD_SILVER = 9
+  SWORD_GOLD = 10
+
+  # SHIELDS
+  SHIELD_BRONZE = 11
+  SHIELD_SILVER = 12
+  SHIELD_GOLD = 13
+
+  # ARMOURS
+  ARMOUR_BRONZE = 11
+  ARMOUR_SILVER = 12
+  ARMOUR_GOLD = 13
+
 # ScorecardType IntEnum
 class ScorecardType(enum.IntEnum):
   # ROOMS

@@ -2,6 +2,11 @@ import tcod as libtcod
 from random import randint
 from map.tile import Tile
 from map.rectangle import Rectangle
+from entity.ai import AI
+from entity.attribute import Attribute
+from entity.entity import Entity
+from entity.stats import Stats
+from constants import CharType, ItemType
 
 class Map:
   def __init__(self, width, height, camera_height):
@@ -14,14 +19,15 @@ class Map:
     self.available_tiles = []
     self.tiles = [[Tile(True) for y in range(self.height)] for x in range(self.width)]
 
-  def generate(self, max_rooms, room_min_size, room_max_size, max_creatures_per_room, max_items_per_room, player, entities):
+  def generate(self, max_rooms, min_room_size, max_room_size, max_creatures_per_room, max_items_per_room, entities):
+    player = entities[0]
     rooms = []
     num_rooms = 0
 
     for r in range(max_rooms):
       # random width and height
-      w = randint(room_min_size, room_max_size)
-      h = randint(room_min_size, room_max_size)
+      w = randint(min_room_size, max_room_size)
+      h = randint(min_room_size, max_room_size)
 
       if num_rooms == 0:
         # First room is at the lowest point in the map
@@ -56,9 +62,10 @@ class Map:
         # finally, append the new room to the list
         rooms.append(new_room)
         num_rooms += 1
-    print(num_rooms)
+
+    # Sort rooms and connect closest
     rooms_sorted = sorted(rooms)
-    for i in range(len(rooms_sorted) - 1):
+    for i in range(num_rooms - 1):
       # connect it to the previous room with a tunnel
       r = rooms_sorted[i]
       s = rooms_sorted[i + 1]
@@ -69,7 +76,6 @@ class Map:
       # center coordinates of previous room
       (prev_x, prev_y) = r.center()
 
-      # flip a coin (random number that is either 0 or 1)
       if randint(0, 1) == 1:
         # first move horizontally, then vertically
         self.create_h_tunnel(prev_x, next_x, prev_y)
@@ -79,8 +85,17 @@ class Map:
         self.create_v_tunnel(prev_y, next_y, prev_x)
         self.create_h_tunnel(prev_x, next_x, next_y)
 
+    for i in range(1, num_rooms):
+      r = rooms[i]
+
       # Add creatures to room
-      #self.place_entities(r, entities, max_monsters_per_room, max_items_per_room)
+      self.place_entities(r, entities, max_creatures_per_room)
+
+    for i in range(1, num_rooms):
+      r = rooms[i]
+
+      # Add items and equipemt to room
+      self.place_items(r, entities, max_items_per_room)
 
   def create_room(self, room):
     # go through the tiles in the rectangle and make them passable
@@ -110,7 +125,7 @@ class Map:
   def move_camera(self, y):
     # New camera coordinates (top-left corner of the screen relative to the map)
     # Coordinates so that the target is at the center of the screen
-    cy = y - self.camera_height//2;
+    cy = y - self.camera_height//2
 
     # Make sure the camera doesn't see outside the map
     if cy < 0:
@@ -120,38 +135,67 @@ class Map:
 
     self.camera_yoffset = cy
 
-  # def place_entities(self, room, entities, max_monsters_per_room, max_items_per_room):
-  #   # Get a random number of monsters
-  #   number_of_monsters = randint(0, max_monsters_per_room)
+  # Update player's scent
+  def update_scent(self, player):
+    dx = (-1, 0, 1, -1, 1, -1, 0, 1)
+    dy = (-1, -1, -1, 0, 0, 1, 1, 1)
+    # Diffusion coefficient
+    dcoef = 1.0/8.0
+    lamb = 1.0
 
-  #   # Get a random number of items
-  #   number_of_items = randint(0, max_items_per_room)
+    # Set the scent for the current location of the player
+    offset = player.x + self.width*player.y
+    self.tiles[player.x][player.y].previous_scent = 0.75
 
-  #   for i in range(number_of_monsters):
-  #     # Choose a random location in the room
-  #     x = randint(room.x1 + 1, room.x2 - 1)
-  #     y = randint(room.y1 + 1, room.y2 - 1)
+    for x in range(1, self.width - 1):
+      for y in range(1, self.height - 1):
+        if not self.is_blocked(x, y):
+          sdiff = 0.0
+          for z in range(8):
+            xp = x + dx[z]
+            yp = y + dy[z]
+            sdiff += self.tiles[xp][yp].previous_scent - self.tiles[x][y].previous_scent
+          self.tiles[x][y].current_scent = lamb*(self.tiles[x][y].previous_scent + dcoef*sdiff)
+        else:
+          self.tiles[x][y].current_scent = 0.0
 
-  #     if not any([entity for entity in entities if entity.x == x and entity.y == y]):
-  #       if randint(0, 100) < 80:
-  #         fighter_component = Fighter(hp=10, defense=0, power=3)
-  #         ai_component = BasicMonster()
+    for x in range(1, self.width - 1):
+      for y in range(1, self.height - 1):
+        tiles[x][y].previous_scent = tiles[x][y].current_scent
 
-  #         monster = Entity(x, y, 'o', libtcod.desaturated_green, 'Orc', blocks=True, render_order=RenderOrder.ACTOR, fighter=fighter_component, ai=ai_component)
-  #       else:
-  #         fighter_component = Fighter(hp=16, defense=1, power=4)
-  #         ai_component = BasicMonster()
+  def place_entities(self, room, entities, max_creatures_per_room):
+    # Get a random number of monsters
+    number_of_monsters = randint(0, max_creatures_per_room)
 
-  #         monster = Entity(x, y, 'T', libtcod.darker_green, 'Troll', blocks=True, fighter=fighter_component, render_order=RenderOrder.ACTOR, ai=ai_component)
+    for i in range(number_of_monsters):
+      # Choose a random location in the room
+      x = randint(room.x1 + 1, room.x2 - 1)
+      y = randint(room.y1 + 1, room.y2 - 1)
 
-  #       entities.append(monster)
+      if not any([entity for entity in entities if entity.x == x and entity.y == y]):
+        if randint(0, 100) < 80:
+          #fighter_component = Fighter(hp=10, defense=0, power=3)
+          #ai_component = BasicMonster()
+          stats = Stats(ap = 3, dp = 0)
+          creature = Entity(x, y, 'o', libtcod.desaturated_green, 'Orc', stats = stats)
+        else:
+          #fighter_component = Fighter(hp=16, defense=1, power=4)
+          #ai_component = BasicMonster()
+          stats = Stats(hp = 16, ap = 4, dp = 1)
+          creature = Entity(x, y, 'T', libtcod.darker_green, 'Troll', stats = stats)
 
-  #   for i in range(number_of_items):
-  #     x = randint(room.x1 + 1, room.x2 - 1)
-  #     y = randint(room.y1 + 1, room.y2 - 1)
+        entities.append(creature)
 
-  #     if not any([entity for entity in entities if entity.x == x and entity.y == y]):
-  #       item_component = Item(use_function=heal, amount=4)
-  #       item = Entity(x, y, '!', libtcod.violet, 'Healing Potion', render_order=RenderOrder.ITEM, item=item_component)
+  def place_items(self, room, entities, max_items_per_room):
+    # Get a random number of items
+    number_of_items = randint(0, max_items_per_room)
 
-  #       entities.append(item)
+    for i in range(number_of_items):
+      x = randint(room.x1 + 1, room.x2 - 1)
+      y = randint(room.y1 + 1, room.y2 - 1)
+
+      if not any([entity for entity in entities if entity.x == x and entity.y == y]):
+        attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
+        item = Entity(x, y, '!', libtcod.violet, 'Healing Potion', False, attr = attr)
+
+        entities.append(item)

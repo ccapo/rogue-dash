@@ -13,7 +13,7 @@ class MessageLog:
     self.width = width
     self.height = height
 
-  def add_message(self, message):
+  def add(self, message):
     # Split the message if necessary, among multiple lines
     new_msg_lines = textwrap3.wrap(message.text, self.width)
 

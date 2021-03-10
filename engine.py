@@ -2,7 +2,8 @@ import tcod as libtcod
 
 from random import randint
 from constants import CharType
-from entity import Entity
+from entity.entity import Entity
+from entity.stats import Stats
 from map.map import Map
 from message import Message, MessageLog
 
@@ -28,9 +29,9 @@ class Engine:
     self.stage = 1
 
     # Define auto-scrolling rate
-    self.delay_threshold_min = 0.5
-    self.delay_threshold_max = 4.0
-    self.delay_threshold_delta = 0.5
+    self.min_delay_threshold = 0.25
+    self.max_delay_threshold = 4.0
+    self.delta_delay_threshold = 0.25
 
     # Define message log and status panel
     self.bar_width = 15
@@ -40,8 +41,8 @@ class Engine:
     self.message_height = self.panel_height - 1
 
     # Define map generation parameters
-    self.room_max_size = 8
-    self.room_min_size = 4
+    self.max_room_size = 8
+    self.min_room_size = 4
     self.max_rooms = 80
     self.max_monsters_per_room = 3
     self.max_items_per_room = 2
@@ -1432,15 +1433,14 @@ class Engine:
     x += 1; libtcod.console_map_ascii_code_to_font(int(CharType.SPRITE_1464), x, y)
 
     # Define player and other entities
-    self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white)
-    #self.npc = Entity(int(self.screen_width / 2 - 5), int(self.screen_height / 2), CharType.KEEPER, libtcod.white)
+    self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white, 'Player', stats = Stats())
     self.entities = [self.player]
 
     # Initialize the root console
     libtcod.console_init_root(self.screen_width, self.screen_height, 'rogue-dash (2021 7DRL)', False)
 
-    self.message_log = MessageLog(self.message_xoffset, self.message_width, self.message_height)
-    self.message_log.add_message(Message('Welcome to rogue-dash!', libtcod.yellow))
+    self.log = MessageLog(self.message_xoffset, self.message_width, self.message_height)
+    self.log.add(Message('Welcome to rogue-dash!', libtcod.green))
 
     # Create consoles
     self.con = libtcod.console_new(self.screen_width, self.screen_height)
@@ -1448,11 +1448,19 @@ class Engine:
     
     # Create map
     self.map = Map(self.map_width, self.map_height, self.camera_height)
-    self.map.generate(self.max_rooms, self.room_min_size, self.room_max_size, self.max_monsters_per_room, self.max_items_per_room, self.player, self.entities)
+    self.map.generate(self.max_rooms, self.min_room_size, self.max_room_size, self.max_monsters_per_room, self.max_items_per_room, self.entities)
     
     # Define input handlers
     self.key = libtcod.Key()
     self.mouse = libtcod.Mouse()
 
+  # Return blocking entity at location if it exists
+  def get_blocking_entities(self, dest_x, dest_y):
+    for entity in self.entities:
+      if entity.blocks and entity.x == dest_x and entity.y == dest_y:
+        return entity
+
+    return None
+
   def delay_threshold(self):
-    return max(self.delay_threshold_min, self.delay_threshold_max - (self.stage - 1) * self.delay_threshold_delta)
+    return max(self.min_delay_threshold, self.max_delay_threshold - (self.stage - 1) * self.delta_delay_threshold)

@@ -13,20 +13,20 @@ if not sys.warnoptions:
 
 def main():
   engine = Engine()
-  elapsed_t = -1.0
+  elapsed = -1.0
 
   while not libtcod.console_is_window_closed():
     libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS, engine.key, engine.mouse)
 
     # Update progress offset
-    elapsed_t += libtcod.sys_get_last_frame_length()
-    if elapsed_t > engine.delay_threshold():
-      elapsed_t = 0.0
+    elapsed += libtcod.sys_get_last_frame_length()
+    if elapsed > engine.delay_threshold():
+      elapsed = 0.0
       engine.map.progress_yoffset -= 1
       if engine.map.progress_yoffset <= 0:
         engine.map.progress_yoffset = 0
 
-    render_all(engine.con, engine.panel, engine.entities, engine.player, engine.map, engine.message_log, engine.screen_width, engine.screen_height, engine.bar_width, engine.panel_height, engine.panel_yoffset, engine.colours)
+    render_all(engine.con, engine.panel, engine.map, engine.log, engine.entities, engine.screen_width, engine.screen_height, engine.bar_width, engine.panel_height, engine.panel_yoffset, engine.colours)
     libtcod.console_flush()
 
     clear_all(engine.con, engine.map, engine.entities)
@@ -39,8 +39,14 @@ def main():
 
     if move:
       dx, dy = move
-      if not engine.map.is_blocked(engine.player.x + dx, engine.player.y + dy):
-        engine.player.move(dx, dy)
+      dest_x = engine.player.x + dx
+      dest_y = engine.player.y + dy
+      if not engine.map.is_blocked(dest_x, dest_y):
+        target = engine.get_blocking_entities(dest_x, dest_y)
+        if target is not None:
+          print('You kick the ' + target.name + ' in the shins, much to its annoyance!')
+        else:
+          engine.player.move(dx, dy)
 
     if exit:
       break

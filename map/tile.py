@@ -6,6 +6,7 @@ class Tile:
     self.blocked = blocked
     self.previous_scent = 0.0
     self.current_scent = 0.0
+    self.speed_modifier = 1.0
     
     # By default, if a tile is blocked, it also blocks sight
     if block_sight is None:
