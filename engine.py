@@ -3,8 +3,7 @@ import tcod as libtcod
 from random import randint
 from constants import CharType
 from entity import Entity
-#from map.map import Map
-from map.dungeon import Dungeon
+from map.map import Map
 from message import Message, MessageLog
 
 class Engine:
@@ -1448,11 +1447,8 @@ class Engine:
     self.panel = libtcod.console_new(self.screen_width, self.panel_height)
     
     # Create map
-    #self.old_map = Map(self.map_width, self.map_height, self.camera_height)
-    #self.old_map.generate(self.max_rooms, self.room_min_size, self.room_max_size, self.max_monsters_per_room, self.max_items_per_room, self.player, self.entities)
-
-    self.map = Dungeon(self.map_width, self.map_height, self.camera_height)
-    self.map.generate(self.player)
+    self.map = Map(self.map_width, self.map_height, self.camera_height)
+    self.map.generate(self.max_rooms, self.room_min_size, self.room_max_size, self.max_monsters_per_room, self.max_items_per_room, self.player, self.entities)
     
     # Define input handlers
     self.key = libtcod.Key()

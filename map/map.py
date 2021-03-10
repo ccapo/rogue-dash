@@ -70,14 +70,14 @@ class Map:
       (prev_x, prev_y) = r.center()
 
       # flip a coin (random number that is either 0 or 1)
-      #if randint(0, 1) == 1:
+      if randint(0, 1) == 1:
         # first move horizontally, then vertically
-        #self.create_h_tunnel(prev_x, next_x, prev_y)
-        #self.create_v_tunnel(prev_y, next_y, next_x)
-      #else:
-      # first move vertically, then horizontally
-      self.create_v_tunnel(prev_y, next_y, prev_x)
-      self.create_h_tunnel(prev_x, next_x, next_y)
+        self.create_h_tunnel(prev_x, next_x, prev_y)
+        self.create_v_tunnel(prev_y, next_y, next_x)
+      else:
+        # first move vertically, then horizontally
+        self.create_v_tunnel(prev_y, next_y, prev_x)
+        self.create_h_tunnel(prev_x, next_x, next_y)
 
       # Add creatures to room
       #self.place_entities(r, entities, max_monsters_per_room, max_items_per_room)
