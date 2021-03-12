@@ -154,9 +154,9 @@ class Map:
     self.elapsed += dt
     if self.elapsed > self.delay_threshold():
       self.elapsed = 0.0
-      self.map.progress_yoffset -= 1
-      if self.map.progress_yoffset <= 0:
-        self.map.progress_yoffset = 0
+      self.progress_yoffset -= 1
+      if self.progress_yoffset < 0:
+        self.progress_yoffset = 0
 
   # Reset elapsed map progress counter, giving the user one second delay
   def reset_elapsed(self):

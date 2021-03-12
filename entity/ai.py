@@ -64,6 +64,7 @@ class AI:
     return status
 
   def moveOrAttack(self, owner, engine):
+    # Compute Manhattan distance
     dx = abs(engine.player.x - owner.x)
     dy = abs(engine.player.y - owner.y)
     d = dx + dy
