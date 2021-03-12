@@ -1,8 +1,8 @@
+import tcod as libtcod
+
 class Entity:
-  """
-  A generic object to represent the player, creatures, items and equipment
-  """
-  def __init__(self, x, y, sym, colour, name, blocks = True, stats = None, attr = None, ai = None):
+  # A generic object to represent the player or creatures
+  def __init__(self, x, y, sym, colour, name, blocks = True, stats = None, ai = None):
     self.x = x
     self.y = y
     self.sym = sym
@@ -13,21 +13,27 @@ class Entity:
     # Stats
     self.stats = stats
 
-    # Attributes
-    self.attr = attr
-
     # AI
     self.ai = ai
+
+  # Update entity AI
+  def update(self, engine):
+    if self.ai is not None:
+      return self.ai.update(self, engine)
+    else:
+      return True
 
   # Move the entity by a given amount
   def move(self, dx, dy):
     self.x += dx
     self.y += dy
 
-  def use(self):
-    if self.attr is not None:
-      print('Using ' + self.name + ' (' + self.attr.type + ')')
+  def attack(self, target):
+    print('You kick the ' + target.name + ' in the shins, much to its annoyance!')
 
-  def update(self):
-    if self.ai is not None:
-      print('AI for ' + self.name + ' is: ' + self.ai.update())
+  def render(self, con, camera_yoffset):
+    libtcod.console_set_default_foreground(con, self.colour)
+    libtcod.console_put_char(con, self.x, self.y - camera_yoffset, self.sym, libtcod.BKGND_NONE)
+
+  def clear(self, con, camera_yoffset):
+    libtcod.console_put_char(con, self.x, self.y - camera_yoffset, ' ', libtcod.BKGND_NONE)

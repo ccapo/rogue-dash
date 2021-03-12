@@ -1,11 +1,13 @@
 import tcod as libtcod
 
 from random import randint
-from constants import CharType
+from constants import CharType, ScorecardType
+from client import upload_score
 from entity.entity import Entity
 from entity.stats import Stats
+from entity.ai import AI
 from map.map import Map
-from message import Message, MessageLog
+from log import Log
 
 class Engine:
   def __init__(self, screen_width = 50, screen_height = 40):
@@ -14,21 +16,13 @@ class Engine:
     self.screen_height = screen_height
 
     # Define height of panel
-    self.panel_height = 7
-    self.message_log = None
-
-    # Define map width and height
-    self.map_width = screen_width
-    self.map_height = 3*screen_height
-
-    # Define camera width, height and position
-    self.camera_width = self.screen_width
-    self.camera_height = self.screen_height - self.panel_height
+    self.panel_height = 8
 
     # Define stage number
     self.stage = 1
 
     # Define auto-scrolling rate
+    self.elapsed = -1.0
     self.min_delay_threshold = 0.25
     self.max_delay_threshold = 4.0
     self.delta_delay_threshold = 0.25
@@ -40,28 +34,154 @@ class Engine:
     self.message_width = self.screen_width - self.bar_width - 2
     self.message_height = self.panel_height - 1
 
-    # Define map generation parameters
-    self.max_room_size = 8
-    self.min_room_size = 4
-    self.max_rooms = 80
-    self.max_monsters_per_room = 3
-    self.max_items_per_room = 2
-    self.max_equip_per_room = 1
-
     # Default font path and number of rows and columns
     self.font_path = 'data/fonts/arial16x16-ext4.png'
     self.font_ncols = 32
     self.font_nrows = 46
+    'rogue-dash.site'
 
-    # Define common colours
-    self.colours = {
-      'dark_wall': libtcod.Color(0, 0, 100),
-      'dark_ground': libtcod.Color(50, 50, 150)
-    }
+    # Initialize scorecard
+    self.scorecard = [0 for i in range(ScorecardType.NRECORDS)]
 
-    # Define scorecard
-    self.scorecard = {'0x0A': 1, '0x0B': 2, '0x0C': 3}
+    # Load custom font
+    self.load_custom_font()
 
+    # Define player and other entities
+    self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white, 'Player', stats = Stats(), ai = AI('player'))
+    self.entities = [self.player]
+
+    # Define list of items
+    self.items = []
+
+    # Initialize the root console
+    libtcod.console_init_root(self.screen_width, self.screen_height, 'rogue-dash (2021 7DRL)', False)
+
+    self.log = Log(self.message_xoffset, self.message_width, self.message_height)
+    self.log.add('Welcome to rogue-dash!', libtcod.green)
+
+    # Create consoles
+    self.con = libtcod.console_new(self.screen_width, self.screen_height)
+    self.panel = libtcod.console_new(self.screen_width, self.panel_height)
+    self.score = libtcod.console_new(20, 6)
+
+    # Create map
+    self.map = Map(self.screen_width, self.screen_height, self.panel_height)
+    self.map.generate(self.entities, self.items)
+
+    # Define input handlers
+    self.key = libtcod.Key()
+    self.mouse = libtcod.Mouse()
+
+  # Upload score to game server
+  def upload_score(self):
+    upload_score(self.scorecard)
+
+  # Update all entities
+  def update(self):
+    libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS, self.key, self.mouse)
+
+    # Update map progress offset
+    self.update_map_progress(libtcod.sys_get_last_frame_length())
+
+    # Update camera offset
+    self.map.move_camera(self.map.progress_yoffset)
+
+    status = True
+    for entity in self.entities:
+      status = status and entity.update(self)
+    return status
+
+  # Render all items and entities
+  def render(self):
+    # Draw all the tiles visble from the camera
+    self.map.render(self.con)
+
+    # Draw all items and equipment
+    for item in self.items:
+      item.render(self.con, self.map.camera_yoffset)
+
+    # Draw all entities
+    for entity in self.entities:
+      entity.render(self.con, self.map.camera_yoffset)
+
+    # Blit con to root console
+    libtcod.console_blit(self.con, 0, 0, self.screen_width, self.screen_height, 0, 0, 0)
+
+    # Set background for panel to black, and clear
+    libtcod.console_set_default_background(self.panel, libtcod.black)
+    libtcod.console_clear(self.panel)
+
+    # Print the game messages, one line at a time
+    y = 1
+    for message in self.log.messages:
+      libtcod.console_set_default_foreground(self.panel, message['colour'])
+      libtcod.console_print_ex(self.panel, self.log.x, y, libtcod.BKGND_NONE, libtcod.LEFT, message['text'])
+      y += 1
+
+    # Render health bar and player stats
+    self.render_stats(1, 1, self.player.stats)
+
+    # Blit panel to root console
+    libtcod.console_blit(self.panel, 0, 0, self.screen_width, self.panel_height, 0, 0, self.panel_yoffset)
+
+    # Flush buffer to the root console
+    libtcod.console_flush()
+
+    # Clear all entities
+    for entity in self.entities:
+      entity.clear(self.con, self.map.camera_yoffset)
+
+    # Clear all items
+    for item in self.items:
+      item.clear(self.con, self.map.camera_yoffset)
+
+  # Render bar in panel
+  def render_stats(self, x, y, stats):
+    bar_width = int(float(stats.hp) / stats.hpmax * self.bar_width)
+
+    libtcod.console_set_default_background(self.panel, libtcod.darker_red)
+    libtcod.console_rect(self.panel, x, y, self.bar_width, 1, False, libtcod.BKGND_SCREEN)
+
+    libtcod.console_set_default_background(self.panel, libtcod.light_red)
+    if bar_width > 0:
+      libtcod.console_rect(self.panel, x, y, bar_width, 1, False, libtcod.BKGND_SCREEN)
+
+    libtcod.console_set_default_foreground(self.panel, libtcod.white)
+    libtcod.console_print_ex(self.panel, int(x + self.bar_width / 2), y, libtcod.BKGND_NONE, libtcod.CENTER, 'HP: {}/{}'.format(stats.hp, stats.hpmax))
+
+    libtcod.console_set_default_background(self.panel, libtcod.black)
+    libtcod.console_set_default_foreground(self.panel, libtcod.white)
+
+    y = 2
+    y += 1; libtcod.console_print_ex(self.panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'ATK: {}'.format(stats.ap))
+    y += 1; libtcod.console_print_ex(self.panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'DEF: {}'.format(stats.dp))
+    y += 1; libtcod.console_print_ex(self.panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'SPD: {}'.format(stats.spd))
+
+  # Return blocking entity at location if it exists
+  def get_entities(self, dest_x, dest_y):
+    for entity in self.entities:
+      if entity.blocks and entity.x == dest_x and entity.y == dest_y:
+        return entity
+
+    return None
+
+  # Update map progress
+  def update_map_progress(self, dt):
+    self.elapsed += dt
+    if self.elapsed > self.delay_threshold():
+      self.elapsed = 0.0
+      self.map.progress_yoffset -= 1
+      if self.map.progress_yoffset <= 0:
+        self.map.progress_yoffset = 0
+
+  # Reset elapsed map progress counter, giving the user one second delay
+  def reset_elapsed(self):
+    self.elapsed = -1.0
+
+  def delay_threshold(self):
+    return max(self.min_delay_threshold, self.max_delay_threshold - (self.stage - 1) * self.delta_delay_threshold)
+
+  def load_custom_font(self):
     # Load font
     libtcod.console_set_custom_font(self.font_path, libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD, self.font_ncols, self.font_nrows)
 
@@ -1431,36 +1551,3 @@ class Engine:
     x += 1; libtcod.console_map_ascii_code_to_font(int(CharType.SPRITE_1462), x, y)
     x += 1; libtcod.console_map_ascii_code_to_font(int(CharType.SPRITE_1463), x, y)
     x += 1; libtcod.console_map_ascii_code_to_font(int(CharType.SPRITE_1464), x, y)
-
-    # Define player and other entities
-    self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white, 'Player', stats = Stats())
-    self.entities = [self.player]
-
-    # Initialize the root console
-    libtcod.console_init_root(self.screen_width, self.screen_height, 'rogue-dash (2021 7DRL)', False)
-
-    self.log = MessageLog(self.message_xoffset, self.message_width, self.message_height)
-    self.log.add(Message('Welcome to rogue-dash!', libtcod.green))
-
-    # Create consoles
-    self.con = libtcod.console_new(self.screen_width, self.screen_height)
-    self.panel = libtcod.console_new(self.screen_width, self.panel_height)
-    
-    # Create map
-    self.map = Map(self.map_width, self.map_height, self.camera_height)
-    self.map.generate(self.max_rooms, self.min_room_size, self.max_room_size, self.max_monsters_per_room, self.max_items_per_room, self.entities)
-    
-    # Define input handlers
-    self.key = libtcod.Key()
-    self.mouse = libtcod.Mouse()
-
-  # Return blocking entity at location if it exists
-  def get_blocking_entities(self, dest_x, dest_y):
-    for entity in self.entities:
-      if entity.blocks and entity.x == dest_x and entity.y == dest_y:
-        return entity
-
-    return None
-
-  def delay_threshold(self):
-    return max(self.min_delay_threshold, self.max_delay_threshold - (self.stage - 1) * self.delta_delay_threshold)
