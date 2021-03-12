@@ -2,7 +2,7 @@ import tcod as libtcod
 
 from random import randint
 from constants import CharType, ScorecardType
-from client import upload_score
+from client import Client
 from entity.entity import Entity
 from entity.stats import Stats
 from entity.ai import AI
@@ -21,12 +21,6 @@ class Engine:
     # Define stage number
     self.stage = 1
 
-    # Define auto-scrolling rate
-    self.elapsed = -1.0
-    self.min_delay_threshold = 0.25
-    self.max_delay_threshold = 4.0
-    self.delta_delay_threshold = 0.25
-
     # Define message log and status panel
     self.bar_width = 15
     self.panel_yoffset = self.screen_height - self.panel_height
@@ -38,13 +32,15 @@ class Engine:
     self.font_path = 'data/fonts/arial16x16-ext4.png'
     self.font_ncols = 32
     self.font_nrows = 46
-    'rogue-dash.site'
+
+    # Load custom font
+    self.load_custom_font()
 
     # Initialize scorecard
     self.scorecard = [0 for i in range(ScorecardType.NRECORDS)]
 
-    # Load custom font
-    self.load_custom_font()
+    # HTTP client
+    self.client = Client()
 
     # Define player and other entities
     self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white, 'Player', stats = Stats(), ai = AI('player'))
@@ -74,18 +70,24 @@ class Engine:
 
   # Upload score to game server
   def upload_score(self):
-    upload_score(self.scorecard)
+    self.client.upload_score(self.scorecard)
 
-  # Update all entities
-  def update(self):
+  # Return blocking entity at location if it exists
+  def get_entities(self, dx, dy):
+    for entity in self.entities:
+      if entity.blocks and entity.x == dx and entity.y == dy:
+        return entity
+
+    return None
+
+  # Update all entities and the map
+  def update(self, dt):
     libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS, self.key, self.mouse)
 
-    # Update map progress offset
-    self.update_map_progress(libtcod.sys_get_last_frame_length())
+    # Update map
+    self.map.update(self.player, dt)
 
-    # Update camera offset
-    self.map.move_camera(self.map.progress_yoffset)
-
+    # Update all entities
     status = True
     for entity in self.entities:
       status = status and entity.update(self)
@@ -156,30 +158,6 @@ class Engine:
     y += 1; libtcod.console_print_ex(self.panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'ATK: {}'.format(stats.ap))
     y += 1; libtcod.console_print_ex(self.panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'DEF: {}'.format(stats.dp))
     y += 1; libtcod.console_print_ex(self.panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'SPD: {}'.format(stats.spd))
-
-  # Return blocking entity at location if it exists
-  def get_entities(self, dest_x, dest_y):
-    for entity in self.entities:
-      if entity.blocks and entity.x == dest_x and entity.y == dest_y:
-        return entity
-
-    return None
-
-  # Update map progress
-  def update_map_progress(self, dt):
-    self.elapsed += dt
-    if self.elapsed > self.delay_threshold():
-      self.elapsed = 0.0
-      self.map.progress_yoffset -= 1
-      if self.map.progress_yoffset <= 0:
-        self.map.progress_yoffset = 0
-
-  # Reset elapsed map progress counter, giving the user one second delay
-  def reset_elapsed(self):
-    self.elapsed = -1.0
-
-  def delay_threshold(self):
-    return max(self.min_delay_threshold, self.max_delay_threshold - (self.stage - 1) * self.delta_delay_threshold)
 
   def load_custom_font(self):
     # Load font

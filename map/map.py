@@ -10,7 +10,7 @@ from item.attribute import Attribute
 from constants import CharType, ItemType
 
 class Map:
-  def __init__(self, width, height, panel_height):
+  def __init__(self, width, height, panel_height, stage = 1):
     # Define map width and height
     self.map_width = width
     self.map_height = 3*height
@@ -20,6 +20,14 @@ class Map:
     self.camera_height = height - panel_height
     self.camera_yoffset = 0
 
+    # Define stage
+    self.stage = stage
+
+    # Define map auto-scrolling rate
+    self.elapsed = -1.0
+    self.min_delay_threshold = 0.25
+    self.max_delay_threshold = 4.0
+    self.delta_delay_threshold = 0.25
     self.progress_yoffset = self.map_height - self.camera_height//2 - 1
 
     self.available_tiles = []
@@ -141,10 +149,26 @@ class Map:
       return True
     return False
 
-  def move_camera(self, y):
+  # Update map progress
+  def update_map_progress(self, dt):
+    self.elapsed += dt
+    if self.elapsed > self.delay_threshold():
+      self.elapsed = 0.0
+      self.map.progress_yoffset -= 1
+      if self.map.progress_yoffset <= 0:
+        self.map.progress_yoffset = 0
+
+  # Reset elapsed map progress counter, giving the user one second delay
+  def reset_elapsed(self):
+    self.elapsed = -1.0
+
+  def delay_threshold(self):
+    return max(self.min_delay_threshold, self.max_delay_threshold - (self.stage - 1) * self.delta_delay_threshold)
+
+  def move_camera(self):
     # New camera coordinates (top-left corner of the screen relative to the map)
     # Coordinates so that the target is at the center of the screen
-    cy = y - self.camera_height//2
+    cy = self.progress_yoffset - self.camera_height//2
 
     # Make sure the camera doesn't see outside the map
     if cy < 0:
@@ -181,6 +205,7 @@ class Map:
       for y in range(1, self.map_height - 1):
         self.tiles[x][y].previous_scent = self.tiles[x][y].current_scent
 
+  # Place creatures in rooms
   def place_entities(self, room, entities):
     # Get a random number of monsters
     number_of_monsters = randint(0, self.max_creatures_per_room)
@@ -204,6 +229,7 @@ class Map:
 
         entities.append(creature)
 
+  # Place items in rooms
   def place_items(self, room, items):
     # Get a random number of items
     number_of_items = randint(0, self.max_items_per_room)
@@ -217,6 +243,15 @@ class Map:
         item = Item(x, y, '!', libtcod.violet, 'Healing Potion', attr = attr)
 
         items.append(item)
+
+  # Update map
+  def update(self, player, dt):
+    # Update map progress offset
+    self.update_map_progress(dt)
+
+    self.move_camera()
+
+    self.update_scent(player)
 
   def render(self, con):
     for y in range(self.camera_yoffset, self.camera_height + self.camera_yoffset + 1):

@@ -13,7 +13,8 @@ def main():
 
   while not libtcod.console_is_window_closed() and status:
     # Update all entities
-    status = engine.update()
+    dt = libtcod.sys_get_last_frame_length()
+    status = engine.update(dt)
 
     # Render all entities, equipment and items
     engine.render()
