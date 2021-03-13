@@ -1,11 +1,12 @@
 from random import randint
 import tcod as libtcod
 from handlers import handle_keys
+from constants import CharType
 
 class AI:
-  def __init__(self, type = None, threshold = 0.0):
+  def __init__(self, type = None):
     self.type = type
-    self.threshold = threshold
+    self.threshold = 0.0
 
   def update(self, owner, engine):
     status = True
@@ -27,6 +28,17 @@ class AI:
             owner.attack(target)
           else:
             owner.move(dx, dy)
+            if dx == 0 and dy == -1:
+              owner.sym = CharType.PLAYER_UP
+            elif dx == -1 and dy == 0:
+              owner.sym = CharType.PLAYER_LEFT
+            elif dx == 0 and dy == 1:
+              owner.sym = CharType.PLAYER_DOWN
+            elif dx == 1 and dy == 0:
+              owner.sym = CharType.PLAYER_RIGHT
+            obj = engine.get_items(owner.x, owner.y)
+            if obj is not None:
+              obj.use()
 
       # If player is at bottom edge of visible map, push them up
       if owner.y > engine.map.camera_height + engine.map.camera_yoffset - 1:
@@ -40,6 +52,7 @@ class AI:
             status = False
           else:
             owner.move(dx, dy)
+            owner.sym = CharType.PLAYER_UP
         else:
           engine.log.add('You Died', libtcod.red)
           status = False
@@ -53,7 +66,7 @@ class AI:
       if fullscreen:
         libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
     elif self.type == 'creature':
-      if self.threshold > 1.25:
+      if owner.stats.spd*self.threshold >= 1.0:
         self.threshold = 0.0
         self.moveOrAttack(owner, engine)
       else:

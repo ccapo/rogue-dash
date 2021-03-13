@@ -15,7 +15,7 @@ class Item:
 
   def use(self):
     if self.attr is not None:
-      print('Using ' + self.name + ' (' + self.attr.type + ')')
+      print("Using {} ({})".format(self.name, self.attr.type.name))
 
   def render(self, con, camera_yoffset):
     libtcod.console_set_default_foreground(con, self.colour)

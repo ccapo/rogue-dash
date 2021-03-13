@@ -43,7 +43,7 @@ class Engine:
     self.client = Client()
 
     # Define player and other entities
-    self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white, 'Player', stats = Stats(), ai = AI('player'))
+    self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white, 'Player', stats = Stats(spd = 4), ai = AI('player'))
     self.entities = [self.player]
 
     # Define list of items
@@ -61,7 +61,7 @@ class Engine:
     self.score = libtcod.console_new(20, 6)
 
     # Create map
-    self.map = Map(self.screen_width, self.screen_height, self.panel_height)
+    self.map = Map(self.screen_width, self.screen_height, self.panel_height, self.stage)
     self.map.generate(self.entities, self.items)
 
     # Define input handlers
@@ -77,6 +77,14 @@ class Engine:
     for entity in self.entities:
       if entity.blocks and entity.x == dx and entity.y == dy:
         return entity
+
+    return None
+
+  # Return items at location if it exists
+  def get_items(self, dx, dy):
+    for item in self.items:
+      if item.x == dx and item.y == dy:
+        return item
 
     return None
 

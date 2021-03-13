@@ -29,7 +29,7 @@ class Entity:
     self.y += dy
 
   def attack(self, target):
-    print('You kick the ' + target.name + ' in the shins, much to its annoyance!')
+    print("The {} kicks the {} in the shins!".format(self.name, target.name))
 
   def render(self, con, camera_yoffset):
     libtcod.console_set_default_foreground(con, self.colour)

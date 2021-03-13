@@ -216,16 +216,17 @@ class Map:
       y = randint(room.y1 + 1, room.y2 - 1)
 
       if not any([entity for entity in entities if entity.x == x and entity.y == y]):
+        rsym = randint(441, 1464)
         if randint(0, 100) < 80:
           #fighter_component = Fighter(hp=10, defense=0, power=3)
           #ai_component = BasicMonster()
-          stats = Stats(ap = 3, dp = 0)
-          creature = Entity(x, y, 'o', libtcod.desaturated_green, 'Orc', stats = stats, ai = AI('creature'))
+          stats = Stats(hp = 10, ap = 3, dp = 0)
+          creature = Entity(x, y, rsym, libtcod.white, 'Orc', stats = stats, ai = AI('creature'))
         else:
           #fighter_component = Fighter(hp=16, defense=1, power=4)
           #ai_component = BasicMonster()
           stats = Stats(hp = 16, ap = 4, dp = 1)
-          creature = Entity(x, y, 'T', libtcod.darker_green, 'Troll', stats = stats, ai = AI('creature'))
+          creature = Entity(x, y, rsym, libtcod.white, 'Troll', stats = stats, ai = AI('creature'))
 
         entities.append(creature)
 
@@ -240,7 +241,7 @@ class Map:
 
       if not any([item for item in items if item.x == x and item.y == y]):
         attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
-        item = Item(x, y, '!', libtcod.violet, 'Healing Potion', attr = attr)
+        item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
 
         items.append(item)
 
