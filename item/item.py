@@ -1,4 +1,5 @@
 import tcod as libtcod
+from constants import ItemType
 
 class Item:
   # A generic object to represent an item or equipment
@@ -13,9 +14,16 @@ class Item:
     # Attributes
     self.attr = attr
 
-  def use(self):
+  def use(self, target):
     if self.attr is not None:
-      print("Using {} ({})".format(self.name, self.attr.type.name))
+      if self.attr.type == ItemType.POTION_HEAL:
+        if target.stats.hp < target.stats.hpmax:
+          target.stats.hp += self.attr.value
+          if target.stats.hp > target.stats.hpmax:
+            target.stats.hp = target.stats.hpmax
+          return True
+    return False
+
 
   def render(self, con, camera_yoffset):
     libtcod.console_set_default_foreground(con, self.colour)

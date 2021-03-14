@@ -43,7 +43,7 @@ class Engine:
     self.client = Client()
 
     # Define player and other entities
-    self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white, 'Player', stats = Stats(spd = 4), ai = AI('player'))
+    self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white, 'Player', stats = Stats(), ai = AI('player'))
     self.entities = [self.player]
 
     # Define list of items
@@ -110,8 +110,8 @@ class Engine:
     for item in self.items:
       item.render(self.con, self.map.camera_yoffset)
 
-    # Draw all entities
-    for entity in self.entities:
+    # Draw all entities in reverse order
+    for entity in reversed(self.entities):
       entity.render(self.con, self.map.camera_yoffset)
 
     # Blit con to root console

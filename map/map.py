@@ -220,12 +220,12 @@ class Map:
         if randint(0, 100) < 80:
           #fighter_component = Fighter(hp=10, defense=0, power=3)
           #ai_component = BasicMonster()
-          stats = Stats(hp = 10, ap = 3, dp = 0)
+          stats = Stats(hp = 10, ap = 2, dp = 0, spd = 2)
           creature = Entity(x, y, rsym, libtcod.white, 'Orc', stats = stats, ai = AI('creature'))
         else:
           #fighter_component = Fighter(hp=16, defense=1, power=4)
           #ai_component = BasicMonster()
-          stats = Stats(hp = 16, ap = 4, dp = 1)
+          stats = Stats(hp = 12, ap = 3, dp = 1, spd = 2)
           creature = Entity(x, y, rsym, libtcod.white, 'Troll', stats = stats, ai = AI('creature'))
 
         entities.append(creature)
