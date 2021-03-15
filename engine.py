@@ -26,10 +26,10 @@ class Engine:
     self.panel_yoffset = self.screen_height - self.panel_height
     self.message_xoffset = self.bar_width + 2
     self.message_width = self.screen_width - self.bar_width - 2
-    self.message_height = self.panel_height - 1
+    self.message_height = self.panel_height - 2
 
     # Default font path and number of rows and columns
-    self.font_path = 'data/fonts/arial16x16-ext4.png'
+    self.font_path = 'data/fonts/arial16x16-ext.png'
     self.font_ncols = 32
     self.font_nrows = 46
 
@@ -49,6 +49,9 @@ class Engine:
     # Define list of items
     self.items = []
 
+    # Define exit for current stage
+    self.exit = Entity(0, 0, CharType.STAIRS_DOWN, libtcod.white, 'Exit', blocks = False)
+
     # Initialize the root console
     libtcod.console_init_root(self.screen_width, self.screen_height, 'rogue-dash (2021 7DRL)', False)
 
@@ -61,8 +64,9 @@ class Engine:
     self.score = libtcod.console_new(20, 6)
 
     # Create map
+    self.next_stage = False
     self.map = Map(self.screen_width, self.screen_height, self.panel_height, self.stage)
-    self.map.generate(self.entities, self.items)
+    self.map.generate(self.entities, self.items, self.exit)
 
     # Define input handlers
     self.key = libtcod.Key()
@@ -77,7 +81,6 @@ class Engine:
     for entity in self.entities:
       if entity.blocks and entity.x == dx and entity.y == dy:
         return entity
-
     return None
 
   # Return items at location if it exists
@@ -85,7 +88,12 @@ class Engine:
     for item in self.items:
       if item.x == dx and item.y == dy:
         return item
+    return None
 
+  # Return exit if it exists
+  def get_exit(self, dx, dy):
+    if self.exit.x == dx and self.exit.y == dy:
+      return self.exit
     return None
 
   # Update all entities and the map
@@ -97,14 +105,30 @@ class Engine:
 
     # Update all entities
     status = True
+    self.next_stage = False
     for entity in self.entities:
       status = status and entity.update(self)
+
+    # If the player uses the exit, advance to the next stage
+    if self.next_stage == True:
+      self.next_stage == False
+      self.stage += 1
+      self.entities = [self.player]
+      self.items = []
+      self.exit = Entity(0, 0, CharType.STAIRS_DOWN, libtcod.white, 'Exit', blocks = False)
+      self.map = Map(self.screen_width, self.screen_height, self.panel_height, self.stage)
+      self.map.generate(self.entities, self.items, self.exit)
+      self.log.add("Welcome to stage {}!".format(self.stage), libtcod.green)
+
     return status
 
   # Render all items and entities
   def render(self):
     # Draw all the tiles visble from the camera
     self.map.render(self.con)
+
+    # Draw exit
+    self.exit.render(self.con, self.map.camera_yoffset)
 
     # Draw all items and equipment
     for item in self.items:
@@ -144,6 +168,9 @@ class Engine:
     # Clear all items
     for item in self.items:
       item.clear(self.con, self.map.camera_yoffset)
+
+    # Clear exit
+    self.exit.clear(self.con, self.map.camera_yoffset)
 
   # Render bar in panel
   def render_stats(self, x, y, stats):

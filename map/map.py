@@ -10,7 +10,7 @@ from item.attribute import Attribute
 from constants import CharType, ItemType
 
 class Map:
-  def __init__(self, width, height, panel_height, stage = 1):
+  def __init__(self, width, height, panel_height, stage):
     # Define map width and height
     self.map_width = width
     self.map_height = 3*height
@@ -48,7 +48,7 @@ class Map:
       'hole': libtcod.black
     }
 
-  def generate(self, entities, items):
+  def generate(self, entities, items, exit):
     player = entities[0]
     rooms = []
     num_rooms = 0
@@ -113,6 +113,11 @@ class Map:
         # first move vertically, then horizontally
         self.create_v_tunnel(prev_y, next_y, prev_x)
         self.create_h_tunnel(prev_x, next_x, next_y)
+
+    # Put exit in last room
+    (exit_x, exit_y) = rooms_sorted[0].center()
+    exit.x = exit_x
+    exit.y = exit_y
 
     for i in range(1, num_rooms):
       r = rooms[i]

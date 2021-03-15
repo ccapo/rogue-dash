@@ -17,5 +17,6 @@ Entry for 2021 7DRL Competition
 
 # Play:
 - WASD or arrow keys to move
+- ENTER key to use stairs
 - ESC key or close window to quit
-- Left ALT + ENTER to toggle fullscreen
+- DEL key to toggle fullscreen

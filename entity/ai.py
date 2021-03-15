@@ -16,6 +16,7 @@ class AI:
       action = handle_keys(engine.key)
 
       move = action.get('move')
+      act = action.get('action')
       exit = action.get('exit')
       fullscreen = action.get('fullscreen')
 
@@ -64,8 +65,10 @@ class AI:
           engine.log.add('You Died', libtcod.red)
           status = False
 
-      # Update player scent
-      engine.map.update_scent(owner)
+      if act:
+        exit = engine.get_exit(owner.x, owner.y)
+        if exit is not None:
+          engine.next_stage = True
 
       if exit:
         status = False

@@ -52,9 +52,11 @@ class Entity:
     return False
 
   def die(self):
+    self.colour = libtcod.white
+    if self.name == 'Player':
+      self.colour = libtcod.light_red
     self.name = 'corpse'
     self.sym = CharType.SKULL
-    self.colour = libtcod.white
     self.blocks = False
     self.ai = None
 
