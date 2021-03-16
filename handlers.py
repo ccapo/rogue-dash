@@ -12,12 +12,12 @@ def handle_keys(key):
     return {'move': (1, 0)}
 
   if key.vk == libtcod.KEY_DELETE:
-    # Delete: toggle full screen
+    # Toggle full screen
     return {'fullscreen': True}
 
   elif key.vk == libtcod.KEY_ENTER:
-    # Enter: Perform action
-    return {'action': True}
+    # Use stairs
+    return {'stairs': True}
 
   elif key.vk == libtcod.KEY_ESCAPE:
     # Exit the game

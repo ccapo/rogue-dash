@@ -49,6 +49,9 @@ class Engine:
     # Define list of items
     self.items = []
 
+    # Define list of equipment
+    self.equips = []
+
     # Define exit for current stage
     self.exit = Entity(0, 0, CharType.STAIRS_DOWN, libtcod.white, 'Exit', blocks = False)
 
@@ -66,7 +69,7 @@ class Engine:
     # Create map
     self.next_stage = False
     self.map = Map(self.screen_width, self.screen_height, self.panel_height, self.stage)
-    self.map.generate(self.entities, self.items, self.exit)
+    self.map.generate(self.entities, self.items, self.equips, self.exit)
 
     # Define input handlers
     self.key = libtcod.Key()

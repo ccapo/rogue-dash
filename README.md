@@ -20,3 +20,5 @@ Entry for 2021 7DRL Competition
 - ENTER key to use stairs
 - ESC key or close window to quit
 - DEL key to toggle fullscreen
+- Items and equipment are picked up automatically.
+- Items are consumed immediately, and equipment is replaced.

@@ -7,7 +7,8 @@ class AI:
   def __init__(self, type = None, scent_threshold = 0.0625):
     self.type = type
     self.scent_threshold = scent_threshold
-    self.elapsed = 0.0
+    self.move_elapsed = 0.0
+    self.consume_elapsed = 0.0
 
   def update(self, owner, engine):
     status = True
@@ -20,9 +21,9 @@ class AI:
       exit = action.get('exit')
       fullscreen = action.get('fullscreen')
 
-      if owner.stats.spd*self.elapsed >= 1.0:
+      if owner.stats.spd*self.move_elapsed >= 1.0:
         if move:
-          self.elapsed = 0.0
+          self.move_elapsed = 0.0
           dx, dy = move
           dest_x = owner.x + dx
           dest_y = owner.y + dy
@@ -46,7 +47,7 @@ class AI:
                 if used == True:
                   engine.items.remove(obj)
       else:
-        self.elapsed += libtcod.sys_get_last_frame_length()
+        self.move_elapsed += libtcod.sys_get_last_frame_length()
 
       # If player is at bottom edge of visible map, push them up
       if owner.y > engine.map.camera_height + engine.map.camera_yoffset - 1:
@@ -76,14 +77,14 @@ class AI:
       if fullscreen:
         libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
     elif self.type == 'creature':
-      if owner.stats.spd*self.elapsed >= 1.0:
-        self.elapsed = 0.0
+      if owner.stats.spd*self.move_elapsed >= 1.0:
+        self.move_elapsed = 0.0
         player_died = self.moveOrAttack(owner, engine)
         if player_died == True:
           engine.log.add('You Died', libtcod.red)
           status = False
       else:
-        self.elapsed += libtcod.sys_get_last_frame_length()
+        self.move_elapsed += libtcod.sys_get_last_frame_length()
     else:
       print('Unreognized AI type: ' + self.type)
 

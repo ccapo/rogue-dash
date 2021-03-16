@@ -20,7 +20,7 @@ def main():
     engine.render()
 
   # Upload score to game server
-  engine.upload_score()
+  #engine.upload_score()
 
   # Fade out
   if not status:

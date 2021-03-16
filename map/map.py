@@ -36,10 +36,19 @@ class Map:
     # Define map generation parameters
     self.max_room_size = 8
     self.min_room_size = 4
-    self.max_rooms = 80
-    self.max_creatures_per_room = 3
+    self.max_rooms = 50
+    self.max_creatures_per_room = 2
     self.max_items_per_room = 2
     self.max_equip_per_room = 1
+
+    # Create 16 unique creature symbol
+    self.creature_symbols = []
+    num_create_types = 16
+    while num_create_types > 0:
+      rsym = randint(CharType.SPRITE_441, CharType.SPRITE_1464)
+      if rsym not in self.creature_symbols:
+        self.creature_symbols.append(rsym)
+        num_create_types -= 1
 
     # Define common colours
     self.colours = {
@@ -48,7 +57,7 @@ class Map:
       'hole': libtcod.black
     }
 
-  def generate(self, entities, items, exit):
+  def generate(self, entities, items, equips, exit):
     player = entities[0]
     rooms = []
     num_rooms = 0
@@ -68,7 +77,7 @@ class Map:
         y = randint(0, self.map_height - h - 1)
 
       # Rectangle class makes rectangular rooms
-      new_room = Rectangle(x, y, w, h)
+      new_room = Rectangle(x, y, w, h, self.map_width)
 
       # run through the other rooms and see if they intersect with this one
       for other_room in rooms:
@@ -125,29 +134,26 @@ class Map:
       # Add creatures to room
       self.place_entities(r, entities)
 
-    for i in range(1, num_rooms):
-      r = rooms[i]
-
-      # Add items and equipment to room
+      # Add items to room
       self.place_items(r, items)
+
+      # Add equipment to room
+      #self.place_equipment(r, equips)
 
   def create_room(self, room):
     # go through the tiles in the rectangle and make them passable
     for x in range(room.x1 + 1, room.x2):
       for y in range(room.y1 + 1, room.y2):
         self.tiles[x][y].blocked = False
-        self.tiles[x][y].block_sight = False
         self.available_tiles.append(x + self.map_width*y)
 
   def create_h_tunnel(self, x1, x2, y):
     for x in range(min(x1, x2), max(x1, x2) + 1):
       self.tiles[x][y].blocked = False
-      self.tiles[x][y].block_sight = False
 
   def create_v_tunnel(self, y1, y2, x):
     for y in range(min(y1, y2), max(y1, y2) + 1):
       self.tiles[x][y].blocked = False
-      self.tiles[x][y].block_sight = False
 
   def is_blocked(self, x, y):
     if self.tiles[x][y].blocked or y < self.camera_yoffset or y > self.camera_height + self.camera_yoffset - 1:
@@ -221,17 +227,71 @@ class Map:
       y = randint(room.y1 + 1, room.y2 - 1)
 
       if not any([entity for entity in entities if entity.x == x and entity.y == y]):
-        rsym = randint(441, 1464)
-        if randint(0, 100) < 80:
-          #fighter_component = Fighter(hp=10, defense=0, power=3)
-          #ai_component = BasicMonster()
-          stats = Stats(hp = 10, ap = 2, dp = 0, spd = 2)
-          creature = Entity(x, y, rsym, libtcod.white, 'Orc', stats = stats, ai = AI('creature'))
+        r = randint(0, 100)
+        if r < 1:
+          rsym = self.creature_symbols[0]
+          stats = Stats(hp = 30, ap = 8, dp = 5, spd = 6)
+          creature = Entity(x, y, rsym, libtcod.white, 'Creature_0', stats = stats, ai = AI('creature'))
+        elif r < 3:
+          rsym = self.creature_symbols[1]
+          stats = Stats(hp = 24, ap = 6, dp = 4, spd = 4)
+          creature = Entity(x, y, rsym, libtcod.white, 'Creature_1', stats = stats, ai = AI('creature'))
+        elif r < 4:
+          rsym = self.creature_symbols[2]
+          stats = Stats(hp = 20, ap = 5, dp = 3, spd = 3)
+          creature = Entity(x, y, rsym, libtcod.white, 'Creature_2', stats = stats, ai = AI('creature'))
+        elif r < 6:
+          rsym = self.creature_symbols[3]
+          stats = Stats(hp = 19, ap = 4, dp = 4, spd = 5)
+          creature = Entity(x, y, rsym, libtcod.white, 'Creature_3', stats = stats, ai = AI('creature'))
+        elif r < 9:
+          rsym = self.creature_symbols[4]
+          stats = Stats(hp = 18, ap = 4, dp = 4, spd = 5)
+          creature = Entity(x, y, rsym, libtcod.white, 'Creature_4', stats = stats, ai = AI('creature'))
+        elif r < 12:
+          rsym = self.creature_symbols[5]
+          stats = Stats(hp = 18, ap = 4, dp = 4, spd = 4)
+          creature = Entity(x, y, rsym, libtcod.white, 'Creature_5', stats = stats, ai = AI('creature'))
+        elif r < 15:
+          rsym = self.creature_symbols[6]
+          stats = Stats(hp = 16, ap = 4, dp = 3, spd = 4)
+          creature = Entity(x, y, rsym, libtcod.white, 'Creature_6', stats = stats, ai = AI('creature'))
+        elif r < 19:
+          rsym = self.creature_symbols[7]
+          stats = Stats(hp = 15, ap = 4, dp = 3, spd = 4)
+          creature = Entity(x, y, rsym, libtcod.white, 'Creature_7', stats = stats, ai = AI('creature'))
+        elif r < 24:
+          rsym = self.creature_symbols[8]
+          stats = Stats(hp = 15, ap = 3, dp = 2, spd = 3)
+          creature = Entity(x, y, rsym, libtcod.white, 'Creature_8', stats = stats, ai = AI('creature'))
+        elif r < 30:
+          rsym = self.creature_symbols[9]
+          stats = Stats(hp = 15, ap = 3, dp = 2, spd = 2)
+          creature = Entity(x, y, rsym, libtcod.white, 'Creature_9', stats = stats, ai = AI('creature'))
+        elif r < 37:
+          rsym = self.creature_symbols[10]
+          stats = Stats(hp = 13, ap = 3, dp = 2, spd = 3)
+          creature = Entity(x, y, rsym, libtcod.white, 'Creature_10', stats = stats, ai = AI('creature'))
+        elif r < 45:
+          rsym = self.creature_symbols[11]
+          stats = Stats(hp = 12, ap = 3, dp = 2, spd = 2)
+          creature = Entity(x, y, rsym, libtcod.white, 'Creature_11', stats = stats, ai = AI('creature'))
+        elif r < 55:
+          rsym = self.creature_symbols[12]
+          stats = Stats(hp = 11, ap = 2, dp = 2, spd = 3)
+          creature = Entity(x, y, rsym, libtcod.white, 'Creature_12', stats = stats, ai = AI('creature'))
+        elif r < 67:
+          rsym = self.creature_symbols[13]
+          stats = Stats(hp = 11, ap = 2, dp = 2, spd = 2)
+          creature = Entity(x, y, rsym, libtcod.white, 'Creature_13', stats = stats, ai = AI('creature'))
+        elif r < 82:
+          rsym = self.creature_symbols[14]
+          stats = Stats(hp = 10, ap = 2, dp = 1, spd = 2)
+          creature = Entity(x, y, rsym, libtcod.white, 'Creature_14', stats = stats, ai = AI('creature'))
         else:
-          #fighter_component = Fighter(hp=16, defense=1, power=4)
-          #ai_component = BasicMonster()
-          stats = Stats(hp = 12, ap = 3, dp = 1, spd = 2)
-          creature = Entity(x, y, rsym, libtcod.white, 'Troll', stats = stats, ai = AI('creature'))
+          rsym = self.creature_symbols[15]
+          stats = Stats(hp = 10, ap = 1, dp = 1, spd = 2)
+          creature = Entity(x, y, rsym, libtcod.white, 'Creature_15', stats = stats, ai = AI('creature'))
 
         entities.append(creature)
 
@@ -245,8 +305,60 @@ class Map:
       y = randint(room.y1 + 1, room.y2 - 1)
 
       if not any([item for item in items if item.x == x and item.y == y]):
-        attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
-        item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
+        r = randint(0, 100)
+        if r < 10:
+          attr = Attribute(type = ItemType.POTION_ATK, value = 2, duration = 30.0)
+          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Attack Potion', attr = attr)
+        elif r < 20:
+          attr = Attribute(type = ItemType.POTION_DEF, value = 2, duration = 30.0)
+          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Defense Potion', attr = attr)
+        elif r < 30:
+          attr = Attribute(type = ItemType.POTION_SPD, value = 2, duration = 30.0)
+          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Speed Potion', attr = attr)
+        else:
+          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
+          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
+
+        items.append(item)
+
+  # Place equipment in rooms
+  def place_equipment(self, room, items):
+    # Get a random number of items
+    number_of_equip = randint(0, self.max_equip_per_room)
+
+    for i in range(number_of_equip):
+      x = randint(room.x1 + 1, room.x2 - 1)
+      y = randint(room.y1 + 1, room.y2 - 1)
+
+      if not any([item for item in items if item.x == x and item.y == y]):
+        r = randint(0, 100)
+        if r < 1:
+          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
+          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
+        elif r < 2:
+          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
+          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
+        elif r < 3:
+          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
+          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
+        elif r < 4:
+          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
+          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
+        elif r < 5:
+          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
+          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
+        elif r < 6:
+          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
+          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
+        elif r < 7:
+          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
+          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
+        elif r < 8:
+          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
+          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
+        else:
+          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
+          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
 
         items.append(item)
 
@@ -262,7 +374,7 @@ class Map:
   def render(self, con):
     for y in range(self.camera_yoffset, self.camera_height + self.camera_yoffset + 1):
       for x in range(self.camera_width):
-        wall = self.tiles[x][y].block_sight
+        wall = self.tiles[x][y].blocked
         if wall:
           libtcod.console_set_char_background(con, x, y - self.camera_yoffset, self.colours.get('wall'), libtcod.BKGND_SET)
         else:

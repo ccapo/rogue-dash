@@ -5,7 +5,7 @@ class ItemType(enum.IntEnum):
   POTION_HEAL = 0
   POTION_ATK = 1
   POTION_DEF = 2
-  POTION_UNK = 3
+  POTION_SPD = 3
 
   # RINGS
   RING_ATK = 4
@@ -21,11 +21,6 @@ class ItemType(enum.IntEnum):
   SHIELD_BRONZE = 10
   SHIELD_SILVER = 11
   SHIELD_GOLD = 12
-
-  # ARMOURS
-  ARMOUR_BRONZE = 13
-  ARMOUR_SILVER = 14
-  ARMOUR_GOLD = 15
 
 # ScorecardType IntEnum
 class ScorecardType(enum.IntEnum):
