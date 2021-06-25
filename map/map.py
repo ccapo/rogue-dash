@@ -1,7 +1,6 @@
 import tcod as libtcod
-from random import randint
-from map.tile import Tile
-from map.rectangle import Rectangle
+import random
+from map.ca import CellularAutomata
 from entity.ai import AI
 from entity.entity import Entity
 from entity.stats import Stats
@@ -30,22 +29,18 @@ class Map:
     self.delta_delay_threshold = 0.25
     self.progress_yoffset = self.map_height - self.camera_height//2 - 1
 
-    self.available_tiles = []
-    self.tiles = [[Tile(True) for y in range(self.map_height)] for x in range(self.map_width)]
+    self.tiles = []
 
     # Define map generation parameters
-    self.max_room_size = 8
-    self.min_room_size = 4
-    self.max_rooms = 50
-    self.max_creatures_per_room = 2
-    self.max_items_per_room = 2
-    self.max_equip_per_room = 1
+    self.max_creatures_per_cave = 2
+    self.max_items_per_cave = 2
+    self.max_equip_per_cave = 1
 
-    # Create 16 unique creature symbol
+    # Create 16 unique creature symbols
     self.creature_symbols = []
     num_create_types = 16
     while num_create_types > 0:
-      rsym = randint(CharType.SPRITE_441, CharType.SPRITE_1464)
+      rsym = random.randint(CharType.SPRITE_441, CharType.SPRITE_1464)
       if rsym not in self.creature_symbols:
         self.creature_symbols.append(rsym)
         num_create_types -= 1
@@ -57,103 +52,44 @@ class Map:
       'hole': libtcod.black
     }
 
+    self.ca = CellularAutomata(self.map_width, self.map_height)
+
   def generate(self, entities, items, equips, exit):
     player = entities[0]
-    rooms = []
-    num_rooms = 0
 
-    for r in range(self.max_rooms):
-      # random width and height
-      w = randint(self.min_room_size, self.max_room_size)
-      h = randint(self.min_room_size, self.max_room_size)
+    self.tiles = self.ca.generateLevel()
 
-      if num_rooms == 0:
-        # First room is at the lowest point in the map
-        x = (self.map_width - w)//2
-        y = self.map_height - h - 2
-      else:
-        # random position without going out of the boundaries of the map
-        x = randint(0, self.map_width - w - 1)
-        y = randint(0, self.map_height - h - 1)
+    yexit = 1.0e10
+    xexit = None
+    yplayer = -1.0e10
+    xplayer = None
+    cplayer = None
+    for c in self.ca.caves:
+      for o in c:
+        x = o % self.map_width
+        y = o // self.map_width
+        if y < yexit:
+          yexit = y
+          xexit = x
+        if y > yplayer:
+          yplayer = y
+          xplayer = x
+          cplayer = c
+    exit.x = xexit
+    exit.y = yexit
+    player.x = xplayer
+    player.y = yplayer
 
-      # Rectangle class makes rectangular rooms
-      new_room = Rectangle(x, y, w, h, self.map_width)
+    for c in self.ca.caves:
+      if c is not cplayer:
+        # Add creatures to room
+        self.place_entities(c, entities)
 
-      # run through the other rooms and see if they intersect with this one
-      for other_room in rooms:
-        if new_room.intersect(other_room):
-          break
-      else:
-        # this means there are no intersections, so this room is valid
+        # Add items to room
+        self.place_items(c, items)
 
-        # "paint" it to the map's tiles
-        self.create_room(new_room)
-
-        # center coordinates of new room, will be useful later
-        (new_x, new_y) = new_room.center()
-
-        if num_rooms == 0:
-          # this is the first room, where the player starts
-          player.x = new_x
-          player.y = new_y
-
-        # finally, append the new room to the list
-        rooms.append(new_room)
-        num_rooms += 1
-
-    # Sort rooms and connect closest
-    rooms_sorted = sorted(rooms)
-    for i in range(num_rooms - 1):
-      # connect it to the previous room with a tunnel
-      r = rooms_sorted[i]
-      s = rooms_sorted[i + 1]
-
-      # center coordinates of next room
-      (next_x, next_y) = s.center()
-
-      # center coordinates of previous room
-      (prev_x, prev_y) = r.center()
-
-      if randint(0, 1) == 1:
-        # first move horizontally, then vertically
-        self.create_h_tunnel(prev_x, next_x, prev_y)
-        self.create_v_tunnel(prev_y, next_y, next_x)
-      else:
-        # first move vertically, then horizontally
-        self.create_v_tunnel(prev_y, next_y, prev_x)
-        self.create_h_tunnel(prev_x, next_x, next_y)
-
-    # Put exit in last room
-    (exit_x, exit_y) = rooms_sorted[0].center()
-    exit.x = exit_x
-    exit.y = exit_y
-
-    for i in range(1, num_rooms):
-      r = rooms[i]
-
-      # Add creatures to room
-      self.place_entities(r, entities)
-
-      # Add items to room
-      self.place_items(r, items)
-
-      # Add equipment to room
-      #self.place_equipment(r, equips)
-
-  def create_room(self, room):
-    # go through the tiles in the rectangle and make them passable
-    for x in range(room.x1 + 1, room.x2):
-      for y in range(room.y1 + 1, room.y2):
-        self.tiles[x][y].blocked = False
-        self.available_tiles.append(x + self.map_width*y)
-
-  def create_h_tunnel(self, x1, x2, y):
-    for x in range(min(x1, x2), max(x1, x2) + 1):
-      self.tiles[x][y].blocked = False
-
-  def create_v_tunnel(self, y1, y2, x):
-    for y in range(min(y1, y2), max(y1, y2) + 1):
-      self.tiles[x][y].blocked = False
+        # Add equipment to room
+        self.place_equipment(c, equips)
 
   def is_blocked(self, x, y):
     if self.tiles[x][y].blocked or y < self.camera_yoffset or y > self.camera_height + self.camera_yoffset - 1:
@@ -216,75 +152,78 @@ class Map:
       for y in range(1, self.map_height - 1):
         self.tiles[x][y].previous_scent = self.tiles[x][y].current_scent
 
-  # Place creatures in rooms
-  def place_entities(self, room, entities):
+  # Place creatures in cave
+  def place_entities(self, cave, entities):
     # Get a random number of monsters
-    number_of_monsters = randint(0, self.max_creatures_per_room)
+    number_of_monsters = random.randint(0, self.max_creatures_per_cave)
 
     for i in range(number_of_monsters):
-      # Choose a random location in the room
-      x = randint(room.x1 + 1, room.x2 - 1)
-      y = randint(room.y1 + 1, room.y2 - 1)
+      # Choose a random location in the cave
+      key = random.randint(0, len(cave) - 1)
+      offset = cave[key]
+      x = offset % self.map_width
+      y = offset//self.map_width
+      cave.remove(offset)
 
       if not any([entity for entity in entities if entity.x == x and entity.y == y]):
-        r = randint(0, 100)
-        if r < 1:
-          rsym = self.creature_symbols[0]
-          stats = Stats(hp = 30, ap = 8, dp = 5, spd = 6)
-          creature = Entity(x, y, rsym, libtcod.white, 'Creature_0', stats = stats, ai = AI('creature'))
-        elif r < 3:
-          rsym = self.creature_symbols[1]
-          stats = Stats(hp = 24, ap = 6, dp = 4, spd = 4)
-          creature = Entity(x, y, rsym, libtcod.white, 'Creature_1', stats = stats, ai = AI('creature'))
-        elif r < 4:
-          rsym = self.creature_symbols[2]
-          stats = Stats(hp = 20, ap = 5, dp = 3, spd = 3)
-          creature = Entity(x, y, rsym, libtcod.white, 'Creature_2', stats = stats, ai = AI('creature'))
-        elif r < 6:
-          rsym = self.creature_symbols[3]
-          stats = Stats(hp = 19, ap = 4, dp = 4, spd = 5)
-          creature = Entity(x, y, rsym, libtcod.white, 'Creature_3', stats = stats, ai = AI('creature'))
-        elif r < 9:
-          rsym = self.creature_symbols[4]
-          stats = Stats(hp = 18, ap = 4, dp = 4, spd = 5)
-          creature = Entity(x, y, rsym, libtcod.white, 'Creature_4', stats = stats, ai = AI('creature'))
-        elif r < 12:
-          rsym = self.creature_symbols[5]
-          stats = Stats(hp = 18, ap = 4, dp = 4, spd = 4)
-          creature = Entity(x, y, rsym, libtcod.white, 'Creature_5', stats = stats, ai = AI('creature'))
-        elif r < 15:
-          rsym = self.creature_symbols[6]
-          stats = Stats(hp = 16, ap = 4, dp = 3, spd = 4)
-          creature = Entity(x, y, rsym, libtcod.white, 'Creature_6', stats = stats, ai = AI('creature'))
-        elif r < 19:
-          rsym = self.creature_symbols[7]
-          stats = Stats(hp = 15, ap = 4, dp = 3, spd = 4)
-          creature = Entity(x, y, rsym, libtcod.white, 'Creature_7', stats = stats, ai = AI('creature'))
-        elif r < 24:
-          rsym = self.creature_symbols[8]
-          stats = Stats(hp = 15, ap = 3, dp = 2, spd = 3)
-          creature = Entity(x, y, rsym, libtcod.white, 'Creature_8', stats = stats, ai = AI('creature'))
-        elif r < 30:
-          rsym = self.creature_symbols[9]
-          stats = Stats(hp = 15, ap = 3, dp = 2, spd = 2)
-          creature = Entity(x, y, rsym, libtcod.white, 'Creature_9', stats = stats, ai = AI('creature'))
-        elif r < 37:
-          rsym = self.creature_symbols[10]
-          stats = Stats(hp = 13, ap = 3, dp = 2, spd = 3)
-          creature = Entity(x, y, rsym, libtcod.white, 'Creature_10', stats = stats, ai = AI('creature'))
-        elif r < 45:
-          rsym = self.creature_symbols[11]
-          stats = Stats(hp = 12, ap = 3, dp = 2, spd = 2)
-          creature = Entity(x, y, rsym, libtcod.white, 'Creature_11', stats = stats, ai = AI('creature'))
-        elif r < 55:
-          rsym = self.creature_symbols[12]
-          stats = Stats(hp = 11, ap = 2, dp = 2, spd = 3)
-          creature = Entity(x, y, rsym, libtcod.white, 'Creature_12', stats = stats, ai = AI('creature'))
-        elif r < 67:
-          rsym = self.creature_symbols[13]
-          stats = Stats(hp = 11, ap = 2, dp = 2, spd = 2)
-          creature = Entity(x, y, rsym, libtcod.white, 'Creature_13', stats = stats, ai = AI('creature'))
-        elif r < 82:
+        r = random.randint(0, 100)
+        # if r < 1:
+        #   rsym = self.creature_symbols[0]
+        #   stats = Stats(hp = 30, ap = 8, dp = 5, spd = 6)
+        #   creature = Entity(x, y, rsym, libtcod.white, 'Creature_0', stats = stats, ai = AI('creature'))
+        # elif r < 3:
+        #   rsym = self.creature_symbols[1]
+        #   stats = Stats(hp = 24, ap = 6, dp = 4, spd = 4)
+        #   creature = Entity(x, y, rsym, libtcod.white, 'Creature_1', stats = stats, ai = AI('creature'))
+        # elif r < 4:
+        #   rsym = self.creature_symbols[2]
+        #   stats = Stats(hp = 20, ap = 5, dp = 3, spd = 3)
+        #   creature = Entity(x, y, rsym, libtcod.white, 'Creature_2', stats = stats, ai = AI('creature'))
+        # elif r < 6:
+        #   rsym = self.creature_symbols[3]
+        #   stats = Stats(hp = 19, ap = 4, dp = 4, spd = 5)
+        #   creature = Entity(x, y, rsym, libtcod.white, 'Creature_3', stats = stats, ai = AI('creature'))
+        # elif r < 9:
+        #   rsym = self.creature_symbols[4]
+        #   stats = Stats(hp = 18, ap = 4, dp = 4, spd = 5)
+        #   creature = Entity(x, y, rsym, libtcod.white, 'Creature_4', stats = stats, ai = AI('creature'))
+        # elif r < 12:
+        #   rsym = self.creature_symbols[5]
+        #   stats = Stats(hp = 18, ap = 4, dp = 4, spd = 4)
+        #   creature = Entity(x, y, rsym, libtcod.white, 'Creature_5', stats = stats, ai = AI('creature'))
+        # elif r < 15:
+        #   rsym = self.creature_symbols[6]
+        #   stats = Stats(hp = 16, ap = 4, dp = 3, spd = 4)
+        #   creature = Entity(x, y, rsym, libtcod.white, 'Creature_6', stats = stats, ai = AI('creature'))
+        # elif r < 19:
+        #   rsym = self.creature_symbols[7]
+        #   stats = Stats(hp = 15, ap = 4, dp = 3, spd = 4)
+        #   creature = Entity(x, y, rsym, libtcod.white, 'Creature_7', stats = stats, ai = AI('creature'))
+        # elif r < 24:
+        #   rsym = self.creature_symbols[8]
+        #   stats = Stats(hp = 15, ap = 3, dp = 2, spd = 3)
+        #   creature = Entity(x, y, rsym, libtcod.white, 'Creature_8', stats = stats, ai = AI('creature'))
+        # elif r < 30:
+        #   rsym = self.creature_symbols[9]
+        #   stats = Stats(hp = 15, ap = 3, dp = 2, spd = 2)
+        #   creature = Entity(x, y, rsym, libtcod.white, 'Creature_9', stats = stats, ai = AI('creature'))
+        # elif r < 37:
+        #   rsym = self.creature_symbols[10]
+        #   stats = Stats(hp = 13, ap = 3, dp = 2, spd = 3)
+        #   creature = Entity(x, y, rsym, libtcod.white, 'Creature_10', stats = stats, ai = AI('creature'))
+        # elif r < 45:
+        #   rsym = self.creature_symbols[11]
+        #   stats = Stats(hp = 12, ap = 3, dp = 2, spd = 2)
+        #   creature = Entity(x, y, rsym, libtcod.white, 'Creature_11', stats = stats, ai = AI('creature'))
+        # elif r < 55:
+        #   rsym = self.creature_symbols[12]
+        #   stats = Stats(hp = 11, ap = 2, dp = 2, spd = 3)
+        #   creature = Entity(x, y, rsym, libtcod.white, 'Creature_12', stats = stats, ai = AI('creature'))
+        # elif r < 67:
+        #   rsym = self.creature_symbols[13]
+        #   stats = Stats(hp = 11, ap = 2, dp = 2, spd = 2)
+        #   creature = Entity(x, y, rsym, libtcod.white, 'Creature_13', stats = stats, ai = AI('creature'))
+        if r < 50:
           rsym = self.creature_symbols[14]
           stats = Stats(hp = 10, ap = 2, dp = 1, spd = 2)
           creature = Entity(x, y, rsym, libtcod.white, 'Creature_14', stats = stats, ai = AI('creature'))
@@ -295,72 +234,78 @@ class Map:
 
         entities.append(creature)
 
-  # Place items in rooms
-  def place_items(self, room, items):
+  # Place items in cave
+  def place_items(self, cave, items):
     # Get a random number of items
-    number_of_items = randint(0, self.max_items_per_room)
+    number_of_items = random.randint(0, self.max_items_per_cave)
 
     for i in range(number_of_items):
-      x = randint(room.x1 + 1, room.x2 - 1)
-      y = randint(room.y1 + 1, room.y2 - 1)
+      key = random.randint(0, len(cave) - 1)
+      offset = cave[key]
+      x = offset % self.map_width
+      y = offset//self.map_width
+      cave.remove(offset)
 
       if not any([item for item in items if item.x == x and item.y == y]):
-        r = randint(0, 100)
+        r = random.randint(0, 100)
         if r < 10:
           attr = Attribute(type = ItemType.POTION_ATK, value = 2, duration = 30.0)
-          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Attack Potion', attr = attr)
+          item = Item(x, y, CharType.POTION_GREEN, libtcod.white, 'Attack Potion', attr = attr)
         elif r < 20:
           attr = Attribute(type = ItemType.POTION_DEF, value = 2, duration = 30.0)
-          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Defense Potion', attr = attr)
+          item = Item(x, y, CharType.POTION_BLUE, libtcod.white, 'Defense Potion', attr = attr)
         elif r < 30:
           attr = Attribute(type = ItemType.POTION_SPD, value = 2, duration = 30.0)
-          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Speed Potion', attr = attr)
+          item = Item(x, y, CharType.POTION_YELLOW, libtcod.white, 'Speed Potion', attr = attr)
         else:
           attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
           item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
 
         items.append(item)
 
-  # Place equipment in rooms
-  def place_equipment(self, room, items):
+  # Place equipment in cave
+  def place_equipment(self, cave, equips):
     # Get a random number of items
-    number_of_equip = randint(0, self.max_equip_per_room)
+    number_of_equip = random.randint(0, self.max_equip_per_cave)
 
     for i in range(number_of_equip):
-      x = randint(room.x1 + 1, room.x2 - 1)
-      y = randint(room.y1 + 1, room.y2 - 1)
+      key = random.randint(0, len(cave) - 1)
+      offset = cave[key]
+      x = offset % self.map_width
+      y = offset//self.map_width
+      cave.remove(offset)
 
-      if not any([item for item in items if item.x == x and item.y == y]):
-        r = randint(0, 100)
-        if r < 1:
-          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
-          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
-        elif r < 2:
-          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
-          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
-        elif r < 3:
-          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
-          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
-        elif r < 4:
-          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
-          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
-        elif r < 5:
-          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
-          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
-        elif r < 6:
-          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
-          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
-        elif r < 7:
-          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
-          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
-        elif r < 8:
-          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
-          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
+      if not any([equip for equip in equips if equip.x == x and equip.y == y]):
+        r = random.randint(0, 100)
+        if r < 10:
+          stats = Stats(hp = 0, ap = 2, dp = 0, spd = 0)
+          equip = Entity(x, y, CharType.RING_RED, libtcod.white, 'Ring of Attack', stats = stats)
+        elif r < 20:
+          stats = Stats(hp = 0, ap = 0, dp = 2, spd = 0)
+          equip = Entity(x, y, CharType.RING_GREEN, libtcod.white, 'Ring of Defense', stats = stats)
+        elif r < 30:
+          stats = Stats(hp = 0, ap = 0, dp = 0, spd = 2)
+          equip = Entity(x, y, CharType.RING_BLUE, libtcod.white, 'Ring of Speed', stats = stats)
+        elif r < 40:
+          stats = Stats(hp = 0, ap = 0, dp = 1, spd = 0)
+          equip = Entity(x, y, CharType.SHIELD_BROWN, libtcod.white, 'Wooden Shield', stats = stats)
+        elif r < 50:
+          stats = Stats(hp = 0, ap = 0, dp = 2, spd = 0)
+          equip = Entity(x, y, CharType.SHIELD_GREY, libtcod.white, 'Bronze Shield', stats = stats)
+        elif r < 60:
+          stats = Stats(hp = 0, ap = 0, dp = 4, spd = 0)
+          equip = Entity(x, y, CharType.SHIELD_GOLD, libtcod.white, 'Golden Shield', stats = stats)
+        elif r < 70:
+          stats = Stats(hp = 0, ap = 1, dp = 0, spd = 0)
+          equip = Entity(x, y, CharType.SWORD_BASIC, libtcod.white, 'Bronze Sword', stats = stats)
+        elif r < 80:
+          stats = Stats(hp = 0, ap = 2, dp = 0, spd = 0)
+          equip = Entity(x, y, CharType.SWORD_STEEL, libtcod.white, 'Steel Sword', stats = stats)
         else:
-          attr = Attribute(type = ItemType.POTION_HEAL, value = 4)
-          item = Item(x, y, CharType.POTION_RED, libtcod.white, 'Healing Potion', attr = attr)
+          stats = Stats(hp = 0, ap = 4, dp = 0, spd = 0)
+          equip = Entity(x, y, CharType.SWORD_GOLD, libtcod.white, 'Golden Sword', stats = stats)
 
-        items.append(item)
+        equips.append(equip)
 
   # Update map
   def update(self, player, dt):

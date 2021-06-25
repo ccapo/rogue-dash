@@ -19,7 +19,7 @@ class Engine:
     self.panel_height = 8
 
     # Define stage number
-    self.stage = 1
+    self.stage = 16
 
     # Define message log and status panel
     self.bar_width = 15
@@ -133,9 +133,13 @@ class Engine:
     # Draw exit
     self.exit.render(self.con, self.map.camera_yoffset)
 
-    # Draw all items and equipment
+    # Draw all items
     for item in self.items:
       item.render(self.con, self.map.camera_yoffset)
+
+    # Draw all equipment
+    for equip in self.equips:
+      equip.render(self.con, self.map.camera_yoffset)
 
     # Draw all entities in reverse order
     for entity in reversed(self.entities):
@@ -167,6 +171,10 @@ class Engine:
     # Clear all entities
     for entity in self.entities:
       entity.clear(self.con, self.map.camera_yoffset)
+
+    # Clear all equipment
+    for equip in self.equips:
+      equip.clear(self.con, self.map.camera_yoffset)
 
     # Clear all items
     for item in self.items:
