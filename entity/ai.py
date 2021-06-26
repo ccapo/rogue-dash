@@ -17,8 +17,8 @@ class AI:
       action = handle_keys(engine.key)
 
       move = action.get('move')
-      act = action.get('action')
-      exit = action.get('exit')
+      stairs = action.get('stairs')
+      quit = action.get('quit')
       fullscreen = action.get('fullscreen')
 
       if owner.stats.spd*self.move_elapsed >= 1.0:
@@ -66,12 +66,13 @@ class AI:
           engine.log.add('You Died', libtcod.red)
           status = False
 
-      if act:
-        exit = engine.get_exit(owner.x, owner.y)
-        if exit is not None:
+      if stairs:
+        stairs = engine.get_exit(owner.x, owner.y)
+        if stairs is not None:
           engine.next_stage = True
+          status = True
 
-      if exit:
+      if quit:
         status = False
 
       if fullscreen:

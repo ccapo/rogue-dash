@@ -1,5 +1,6 @@
 import tcod as libtcod
 
+import time
 from random import randint
 from constants import CharType, ScorecardType
 from client import Client
@@ -19,7 +20,7 @@ class Engine:
     self.panel_height = 8
 
     # Define stage number
-    self.stage = 16
+    self.stage = 12
 
     # Define message log and status panel
     self.bar_width = 15
@@ -43,7 +44,7 @@ class Engine:
     self.client = Client()
 
     # Define player and other entities
-    self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white, 'Player', stats = Stats(), ai = AI('player'))
+    self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white, 'Player', stats = Stats(spd = 8), ai = AI('player'))
     self.entities = [self.player]
 
     # Define list of items
@@ -114,13 +115,16 @@ class Engine:
 
     # If the player uses the exit, advance to the next stage
     if self.next_stage == True:
-      self.next_stage == False
+      status = True
+      self.next_stage = False
+      self.progress_yoffset = 0
       self.stage += 1
       self.entities = [self.player]
       self.items = []
+      self.equips = []
       self.exit = Entity(0, 0, CharType.STAIRS_DOWN, libtcod.white, 'Exit', blocks = False)
       self.map = Map(self.screen_width, self.screen_height, self.panel_height, self.stage)
-      self.map.generate(self.entities, self.items, self.exit)
+      self.map.generate(self.entities, self.items, self.equips, self.exit)
       self.log.add("Welcome to stage {}!".format(self.stage), libtcod.green)
 
     return status

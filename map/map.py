@@ -81,14 +81,14 @@ class Map:
     player.y = yplayer
 
     for c in self.ca.caves:
-      if c is not cplayer:
-        # Add creatures to room
+      if c != cplayer:
+        # Add creatures to cave
         self.place_entities(c, entities)
 
-        # Add items to room
+        # Add items to cave
         self.place_items(c, items)
 
-        # Add equipment to room
+        # Add equipment to cave
         self.place_equipment(c, equips)
 
   def is_blocked(self, x, y):
