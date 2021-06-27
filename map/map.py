@@ -32,7 +32,8 @@ class Map:
     self.tiles = []
 
     # Define map generation parameters
-    self.max_creatures_per_cave = 2
+    self.spawn_avoidance = 7
+    self.max_creatures_per_cave = 3
     self.max_items_per_cave = 2
     self.max_equip_per_cave = 1
 
@@ -57,39 +58,38 @@ class Map:
   def generate(self, entities, items, equips, exit):
     player = entities[0]
 
+    # Generate tiles using Cellular Automata method
     self.tiles = self.ca.generateLevel()
 
-    yexit = 1.0e10
-    xexit = None
-    yplayer = -1.0e10
-    xplayer = None
-    cplayer = None
+    # Select player location and exit location
+    exit_y = 1.0e10
+    exit_x = None
+    player_y = -1.0e10
+    player_x = None
     for c in self.ca.caves:
       for o in c:
         x = o % self.map_width
         y = o // self.map_width
-        if y < yexit:
-          yexit = y
-          xexit = x
-        if y > yplayer:
-          yplayer = y
-          xplayer = x
-          cplayer = c
-    exit.x = xexit
-    exit.y = yexit
-    player.x = xplayer
-    player.y = yplayer
+        if y < exit_y:
+          exit_y = y
+          exit_x = x
+        if y > player_y:
+          player_y = y
+          player_x = x
+    exit.x = exit_x
+    exit.y = exit_y
+    player.x = player_x
+    player.y = player_y
 
     for c in self.ca.caves:
-      if c != cplayer:
-        # Add creatures to cave
-        self.place_entities(c, entities)
+      # Add creatures to cave
+      self.place_entities(c, player, entities)
 
-        # Add items to cave
-        self.place_items(c, items)
+      # Add items to cave
+      self.place_items(c, player, items)
 
-        # Add equipment to cave
-        self.place_equipment(c, equips)
+      # Add equipment to cave
+      self.place_equipment(c, player, equips)
 
   def is_blocked(self, x, y):
     if self.tiles[x][y].blocked or y < self.camera_yoffset or y > self.camera_height + self.camera_yoffset - 1:
@@ -153,16 +153,21 @@ class Map:
         self.tiles[x][y].previous_scent = self.tiles[x][y].current_scent
 
   # Place creatures in cave
-  def place_entities(self, cave, entities):
+  def place_entities(self, cave, player, entities):
     # Get a random number of monsters
-    number_of_monsters = random.randint(0, self.max_creatures_per_cave)
+    number_of_monsters = random.randint(1, self.max_creatures_per_cave)
 
     for i in range(number_of_monsters):
       # Choose a random location in the cave
       key = random.randint(0, len(cave) - 1)
       offset = cave[key]
       x = offset % self.map_width
-      y = offset//self.map_width
+      y = offset // self.map_width
+      while((x - player.x)**2 + (y - player.y)**2 <= self.spawn_avoidance**2):
+        key = random.randint(0, len(cave) - 1)
+        offset = cave[key]
+        x = offset % self.map_width
+        y = offset // self.map_width
       cave.remove(offset)
 
       if not any([entity for entity in entities if entity.x == x and entity.y == y]):
@@ -235,7 +240,7 @@ class Map:
         entities.append(creature)
 
   # Place items in cave
-  def place_items(self, cave, items):
+  def place_items(self, cave, player, items):
     # Get a random number of items
     number_of_items = random.randint(0, self.max_items_per_cave)
 
@@ -243,7 +248,12 @@ class Map:
       key = random.randint(0, len(cave) - 1)
       offset = cave[key]
       x = offset % self.map_width
-      y = offset//self.map_width
+      y = offset // self.map_width
+      while((x - player.x)**2 + (y - player.y)**2 <= self.spawn_avoidance**2):
+        key = random.randint(0, len(cave) - 1)
+        offset = cave[key]
+        x = offset % self.map_width
+        y = offset // self.map_width
       cave.remove(offset)
 
       if not any([item for item in items if item.x == x and item.y == y]):
@@ -264,7 +274,7 @@ class Map:
         items.append(item)
 
   # Place equipment in cave
-  def place_equipment(self, cave, equips):
+  def place_equipment(self, cave, player, equips):
     # Get a random number of items
     number_of_equip = random.randint(0, self.max_equip_per_cave)
 
@@ -272,7 +282,12 @@ class Map:
       key = random.randint(0, len(cave) - 1)
       offset = cave[key]
       x = offset % self.map_width
-      y = offset//self.map_width
+      y = offset // self.map_width
+      while((x - player.x)**2 + (y - player.y)**2 <= self.spawn_avoidance**2):
+        key = random.randint(0, len(cave) - 1)
+        offset = cave[key]
+        x = offset % self.map_width
+        y = offset // self.map_width
       cave.remove(offset)
 
       if not any([equip for equip in equips if equip.x == x and equip.y == y]):
