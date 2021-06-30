@@ -20,7 +20,7 @@ class Engine:
     self.panel_height = 8
 
     # Define stage number
-    self.stage = 12
+    self.stage = 16
 
     # Define message log and status panel
     self.bar_width = 15
@@ -44,7 +44,7 @@ class Engine:
     self.client = Client()
 
     # Define player and other entities
-    self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white, 'Player', stats = Stats(spd = 8), ai = AI('player'))
+    self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white, 'Player', stats = Stats(spd = 12), ai = AI('player'))
     self.entities = [self.player]
 
     # Define list of items
@@ -56,6 +56,11 @@ class Engine:
     # Define exit for current stage
     self.exit = Entity(0, 0, CharType.STAIRS_DOWN, libtcod.white, 'Exit', blocks = False)
 
+    # Create map
+    self.next_stage = False
+    self.map = Map(self.screen_width, self.screen_height, self.panel_height, self.stage)
+    self.map.generate(self.entities, self.items, self.equips, self.exit)
+
     # Initialize the root console
     libtcod.console_init_root(self.screen_width, self.screen_height, 'rogue-dash (2021 7DRL)', False)
 
@@ -66,11 +71,6 @@ class Engine:
     self.con = libtcod.console_new(self.screen_width, self.screen_height)
     self.panel = libtcod.console_new(self.screen_width, self.panel_height)
     self.score = libtcod.console_new(20, 6)
-
-    # Create map
-    self.next_stage = False
-    self.map = Map(self.screen_width, self.screen_height, self.panel_height, self.stage)
-    self.map.generate(self.entities, self.items, self.equips, self.exit)
 
     # Define input handlers
     self.key = libtcod.Key()
@@ -115,8 +115,6 @@ class Engine:
 
     # If the player uses the exit, advance to the next stage
     if self.next_stage == True:
-      status = True
-      self.next_stage = False
       self.progress_yoffset = 0
       self.stage += 1
       self.entities = [self.player]

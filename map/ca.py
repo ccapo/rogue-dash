@@ -70,7 +70,7 @@ class CellularAutomata:
 
   # Clean Up Map
   def cleanUpMap(self):
-    if (self.smoothEdges):
+    if self.smoothEdges:
       for i in range(5):
         # Look at each cell individually and check for smoothness
         for x in range(1,self.mapWidth-1):

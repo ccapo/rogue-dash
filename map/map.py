@@ -32,7 +32,8 @@ class Map:
     self.tiles = []
 
     # Define map generation parameters
-    self.spawn_avoidance = 7
+    self.fail_limit = 50
+    self.spawn_avoidance = 5
     self.max_creatures_per_cave = 3
     self.max_items_per_cave = 2
     self.max_equip_per_cave = 1
@@ -163,11 +164,28 @@ class Map:
       offset = cave[key]
       x = offset % self.map_width
       y = offset // self.map_width
-      while((x - player.x)**2 + (y - player.y)**2 <= self.spawn_avoidance**2):
+      failcounter = 0
+      diffbest = -1
+      xbest = None
+      ybest = None
+      while((x - player.x)**2 + (y - player.y)**2 <= self.spawn_avoidance**2 and failcounter < self.fail_limit):
         key = random.randint(0, len(cave) - 1)
         offset = cave[key]
         x = offset % self.map_width
         y = offset // self.map_width
+        diff = abs((x - player.x)**2 + (y - player.y)**2 - self.spawn_avoidance**2)
+        if diff > diffbest:
+          diffbest = diff
+          xbest = x
+          ybest = y
+        failcounter += 1
+
+      # Abort attempt if too many failures encountered
+      if failcounter >= self.fail_limit:
+        x = xbest
+        y = ybest
+        offset = x + self.map_width*y
+
       cave.remove(offset)
 
       if not any([entity for entity in entities if entity.x == x and entity.y == y]):
@@ -249,11 +267,28 @@ class Map:
       offset = cave[key]
       x = offset % self.map_width
       y = offset // self.map_width
-      while((x - player.x)**2 + (y - player.y)**2 <= self.spawn_avoidance**2):
+      failcounter = 0
+      diffbest = -1
+      xbest = None
+      ybest = None
+      while((x - player.x)**2 + (y - player.y)**2 <= self.spawn_avoidance**2) and failcounter < self.fail_limit:
         key = random.randint(0, len(cave) - 1)
         offset = cave[key]
         x = offset % self.map_width
         y = offset // self.map_width
+        diff = abs((x - player.x)**2 + (y - player.y)**2 - self.spawn_avoidance**2)
+        if diff > diffbest:
+          diffbest = diff
+          xbest = x
+          ybest = y
+        failcounter += 1
+
+      # Abort attempt if too many failures encountered
+      if failcounter >= self.fail_limit:
+        x = xbest
+        y = ybest
+        offset = x + self.map_width*y
+
       cave.remove(offset)
 
       if not any([item for item in items if item.x == x and item.y == y]):
@@ -283,11 +318,28 @@ class Map:
       offset = cave[key]
       x = offset % self.map_width
       y = offset // self.map_width
-      while((x - player.x)**2 + (y - player.y)**2 <= self.spawn_avoidance**2):
+      failcounter = 0
+      diffbest = -1
+      xbest = None
+      ybest = None
+      while((x - player.x)**2 + (y - player.y)**2 <= self.spawn_avoidance**2) and failcounter < self.fail_limit:
         key = random.randint(0, len(cave) - 1)
         offset = cave[key]
         x = offset % self.map_width
         y = offset // self.map_width
+        diff = abs((x - player.x)**2 + (y - player.y)**2 - self.spawn_avoidance**2)
+        if diff > diffbest:
+          diffbest = diff
+          xbest = x
+          ybest = y
+        failcounter += 1
+
+      # Abort attempt if too many failures encountered
+      if failcounter >= self.fail_limit:
+        x = xbest
+        y = ybest
+        offset = x + self.map_width*y
+
       cave.remove(offset)
 
       if not any([equip for equip in equips if equip.x == x and equip.y == y]):
