@@ -8,6 +8,7 @@ class AI:
     self.type = type
     self.scent_threshold = scent_threshold
     self.move_elapsed = 0.0
+    self.dash_elapsed = 0.0
     self.consume_elapsed = 0.0
 
   def update(self, owner, engine):
@@ -17,6 +18,7 @@ class AI:
       action = handle_keys(engine.key)
 
       move = action.get('move')
+      dash = action.get('dash')
       stairs = action.get('stairs')
       quit = action.get('quit')
       fullscreen = action.get('fullscreen')
@@ -25,29 +27,29 @@ class AI:
         if move:
           self.move_elapsed = 0.0
           dx, dy = move
-          dest_x = owner.x + dx
-          dest_y = owner.y + dy
-          if not engine.map.is_blocked(dest_x, dest_y):
-            target = engine.get_entities(dest_x, dest_y)
-            if target is not None:
-              owner.attack(target, engine)
-            else:
-              owner.move(dx, dy)
-              if dx == 0 and dy == -1:
-                owner.sym = CharType.PLAYER_UP
-              elif dx == -1 and dy == 0:
-                owner.sym = CharType.PLAYER_LEFT
-              elif dx == 0 and dy == 1:
-                owner.sym = CharType.PLAYER_DOWN
-              elif dx == 1 and dy == 0:
-                owner.sym = CharType.PLAYER_RIGHT
-              obj = engine.get_items(owner.x, owner.y)
-              if obj is not None:
-                used = obj.use(owner)
-                if used == True:
-                  engine.items.remove(obj)
+          self.playerUpdate(owner, engine, dx, dy)
       else:
         self.move_elapsed += libtcod.sys_get_last_frame_length()
+
+      # Dash
+      if owner.stats.spd*self.dash_elapsed >= 50.0:
+        if dash:
+          self.dash_elapsed = 0.0
+          dx = 0
+          dy = 0
+          if owner.sym == CharType.PLAYER_UP:
+            dy = -1
+          elif owner.sym == CharType.PLAYER_LEFT:
+            dx = -1
+          elif owner.sym == CharType.PLAYER_DOWN:
+            dy = 1
+          elif owner.sym == CharType.PLAYER_RIGHT:
+            dx = 1
+
+          for i in range(5):
+            if not self.playerUpdate(owner, engine, dx, dy): break
+      else:
+        self.dash_elapsed += libtcod.sys_get_last_frame_length()
 
       # If player is at bottom edge of visible map, push them up
       if owner.y > engine.map.camera_height + engine.map.camera_yoffset - 1:
@@ -130,4 +132,30 @@ class AI:
         target = engine.get_entities(dest_x, dest_y)
         if target is None:
           owner.move(dx[iz], dy[iz])
+      return False
+
+  def playerUpdate(self, owner, engine, dx, dy):
+    dest_x = owner.x + dx
+    dest_y = owner.y + dy
+    if not engine.map.is_blocked(dest_x, dest_y):
+      target = engine.get_entities(dest_x, dest_y)
+      if target is not None:
+        owner.attack(target, engine)
+      else:
+        owner.move(dx, dy)
+        if dx == 0 and dy == -1:
+          owner.sym = CharType.PLAYER_UP
+        elif dx == -1 and dy == 0:
+          owner.sym = CharType.PLAYER_LEFT
+        elif dx == 0 and dy == 1:
+          owner.sym = CharType.PLAYER_DOWN
+        elif dx == 1 and dy == 0:
+          owner.sym = CharType.PLAYER_RIGHT
+        obj = engine.get_items(owner.x, owner.y)
+        if obj is not None:
+          used = obj.use(owner)
+          if used == True:
+            engine.items.remove(obj)
+      return True
+    else:
       return False

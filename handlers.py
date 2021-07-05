@@ -19,6 +19,10 @@ def handle_keys(key):
     # Use stairs
     return {'stairs': True}
 
+  elif key.vk == libtcod.KEY_SPACE:
+    # Use dash
+    return {'dash': True}
+
   elif key.vk == libtcod.KEY_ESCAPE:
     # Quit the game
     return {'quit': True}

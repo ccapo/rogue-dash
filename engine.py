@@ -162,7 +162,7 @@ class Engine:
       y += 1
 
     # Render health bar and player stats
-    self.render_stats(1, 1, self.player.stats)
+    self.render_stats(1, 1, self.player)
 
     # Blit panel to root console
     libtcod.console_blit(self.panel, 0, 0, self.screen_width, self.panel_height, 0, 0, self.panel_yoffset)
@@ -186,26 +186,40 @@ class Engine:
     self.exit.clear(self.con, self.map.camera_yoffset)
 
   # Render bar in panel
-  def render_stats(self, x, y, stats):
-    bar_width = int(float(stats.hp) / stats.hpmax * self.bar_width)
+  def render_stats(self, x, y, entity):
+    hp_bar_width = int(float(entity.stats.hp) / entity.stats.hpmax * self.bar_width)
 
     libtcod.console_set_default_background(self.panel, libtcod.darker_red)
     libtcod.console_rect(self.panel, x, y, self.bar_width, 1, False, libtcod.BKGND_SCREEN)
 
     libtcod.console_set_default_background(self.panel, libtcod.light_red)
-    if bar_width > 0:
-      libtcod.console_rect(self.panel, x, y, bar_width, 1, False, libtcod.BKGND_SCREEN)
+    if hp_bar_width > 0:
+      libtcod.console_rect(self.panel, x, y, hp_bar_width, 1, False, libtcod.BKGND_SCREEN)
 
     libtcod.console_set_default_foreground(self.panel, libtcod.white)
-    libtcod.console_print_ex(self.panel, int(x + self.bar_width / 2), y, libtcod.BKGND_NONE, libtcod.CENTER, 'HP: {}/{}'.format(stats.hp, stats.hpmax))
+    libtcod.console_print_ex(self.panel, int(x + self.bar_width / 2), y, libtcod.BKGND_NONE, libtcod.CENTER, 'HP: {}/{}'.format(entity.stats.hp, entity.stats.hpmax))
+
+    # Dash bar
+    y += 1
+    dash_bar_width = int(float(entity.stats.spd*entity.ai.dash_elapsed) / 50.0 * self.bar_width)
+
+    libtcod.console_set_default_background(self.panel, libtcod.darker_green)
+    libtcod.console_rect(self.panel, x, y, self.bar_width, 1, False, libtcod.BKGND_SCREEN)
+
+    libtcod.console_set_default_background(self.panel, libtcod.light_green)
+    if dash_bar_width > 0:
+      libtcod.console_rect(self.panel, x, y, dash_bar_width, 1, False, libtcod.BKGND_SCREEN)
+
+    libtcod.console_set_default_foreground(self.panel, libtcod.white)
+    libtcod.console_print_ex(self.panel, int(x + self.bar_width / 2), y, libtcod.BKGND_NONE, libtcod.CENTER, 'Dash')
 
     libtcod.console_set_default_background(self.panel, libtcod.black)
     libtcod.console_set_default_foreground(self.panel, libtcod.white)
 
-    y = 2
-    y += 1; libtcod.console_print_ex(self.panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'ATK: {}'.format(stats.ap))
-    y += 1; libtcod.console_print_ex(self.panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'DEF: {}'.format(stats.dp))
-    y += 1; libtcod.console_print_ex(self.panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'SPD: {}'.format(stats.spd))
+    y += 1
+    y += 1; libtcod.console_print_ex(self.panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'ATK: {}'.format(entity.stats.ap))
+    y += 1; libtcod.console_print_ex(self.panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'DEF: {}'.format(entity.stats.dp))
+    y += 1; libtcod.console_print_ex(self.panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'SPD: {}'.format(entity.stats.spd))
 
   def load_custom_font(self):
     # Load font
