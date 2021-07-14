@@ -1,5 +1,10 @@
 import enum
 
+class StatusType(enum.IntEnum):
+  OK = 0
+  DIED = 1
+  QUIT = 2
+
 class ItemType(enum.IntEnum):
   # POTIONS
   POTION_HEAL = 0

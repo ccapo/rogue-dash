@@ -1,6 +1,6 @@
 from random import uniform
 import tcod as libtcod
-from constants import CharType
+from constants import StatusType, CharType
 
 class Entity:
   # A generic object to represent the player or creatures
@@ -23,7 +23,7 @@ class Entity:
     if self.ai is not None:
       return self.ai.update(self, engine)
     else:
-      return True
+      return StatusType.OK
 
   # Move the entity by a given amount
   def move(self, dx, dy):

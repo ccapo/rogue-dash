@@ -1,7 +1,7 @@
 from random import randint
 import tcod as libtcod
 from handlers import handle_keys
-from constants import CharType
+from constants import StatusType, CharType
 
 class AI:
   def __init__(self, type = None, scent_threshold = 0.0625):
@@ -12,7 +12,7 @@ class AI:
     self.consume_elapsed = 0.0
 
   def update(self, owner, engine):
-    status = True
+    status = StatusType.OK
 
     if self.type == 'player':
       action = handle_keys(engine.key)
@@ -20,8 +20,6 @@ class AI:
       move = action.get('move')
       dash = action.get('dash')
       stairs = action.get('stairs')
-      quit = action.get('quit')
-      fullscreen = action.get('fullscreen')
 
       if owner.stats.spd*self.move_elapsed >= 1.0:
         if move:
@@ -60,32 +58,27 @@ class AI:
           target = engine.get_entities(dest_x, dest_y)
           if target is not None:
             engine.log.add('You Died', libtcod.red)
-            status = False
+            status = StatusType.DIED
           else:
             owner.move(dx, dy)
             owner.sym = CharType.PLAYER_UP
         else:
           engine.log.add('You Died', libtcod.red)
-          status = False
+          status = StatusType.DIED
 
       if stairs:
         stairs = engine.get_exit(owner.x, owner.y)
         if stairs is not None:
           engine.next_stage = True
-          status = True
+          status = StatusType.OK
 
-      if quit:
-        status = False
-
-      if fullscreen:
-        libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
     elif self.type == 'creature':
       if owner.stats.spd*self.move_elapsed >= 1.0:
         self.move_elapsed = 0.0
         player_died = self.moveOrAttack(owner, engine)
         if player_died == True:
           engine.log.add('You Died', libtcod.red)
-          status = False
+          status = StatusType.DIED
       else:
         self.move_elapsed += libtcod.sys_get_last_frame_length()
     else:
