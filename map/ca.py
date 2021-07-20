@@ -31,33 +31,56 @@ class CellularAutomata:
   # Generate a map
   def generateLevel(self):
     self.caves = []
-
     self.tiles = [[Tile() for y in range(self.mapHeight)] for x in range(self.mapWidth)]
 
+    # Start with randomly filled map
     self.randomFillMap()
     
+    # Apply cellular automata rules iteratively
     self.createCaves()
 
+    # Locate all the isolated caves, discarding small and large caves
     self.getCaves()
 
+    # Connect caves via tunnels
     self.connectCaves()
 
+    # Clean up map by smoothing endges
     self.cleanUpMap()
+
+    # Create a cavity where the player will start
+    self.createCavity()
 
     return self.tiles
 
+  def sealLevel(self):
+    y = 0
+    for x in range(self.mapWidth):
+      self.tiles[x][y].blocked = True
+    y = self.mapHeight - 1
+    for x in range(self.mapWidth):
+      self.tiles[x][y].blocked = True
+    x = 0
+    for y in range(self.mapHeight):
+      self.tiles[x][y].blocked = True
+    x = self.mapWidth - 1
+    for y in range(self.mapHeight):
+      self.tiles[x][y].blocked = True
+
   # Randomly populate map
   def randomFillMap(self):
-    for y in range(1, self.mapHeight - 1):
-      for x in range(1, self.mapWidth - 1):
+    for y in range(2, self.mapHeight - 2):
+      for x in range(2, self.mapWidth - 2):
         if random.random() >= self.wallProbability:
           self.tiles[x][y].blocked = False
+
+    self.sealLevel()
 
   def createCaves(self):
     for i in range(self.iterations):
       # Pick a random point with a buffer around the edges of the map
-      x = random.randint(1,self.mapWidth-2)
-      y = random.randint(1,self.mapHeight-2)
+      x = random.randint(2, self.mapWidth - 3)
+      y = random.randint(2, self.mapHeight - 3)
 
       # If the cell's neighboring walls > self.neighbors, set blocked to true
       if self.getAdjacentWalls(x,y) > self.neighbors:
@@ -66,15 +89,15 @@ class CellularAutomata:
       elif self.getAdjacentWalls(x,y) < self.neighbors:
         self.tiles[x][y].blocked = False
 
-    self.cleanUpMap()
+    self.sealLevel()
 
   # Clean Up Map
   def cleanUpMap(self):
     if self.smoothEdges:
       for i in range(5):
         # Look at each cell individually and check for smoothness
-        for x in range(1,self.mapWidth-1):
-          for y in range(1,self.mapHeight-1):
+        for x in range(2, self.mapWidth - 2):
+          for y in range(2, self.mapHeight - 2):
             if (self.tiles[x][y].blocked == True) and (self.getAdjacentWallsSimple(x,y) <= self.smoothing):
               self.tiles[x][y].blocked = False
 
@@ -126,12 +149,21 @@ class CellularAutomata:
         dy = 0
 
       # Walk, avoiding boundaries
-      if (0 < x+dx < self.mapWidth-1) and (0 < y+dy < self.mapHeight-1):
+      if (2 < x + dx < self.mapWidth - 3) and (2 < y + dy < self.mapHeight - 3):
         x += dx
         y += dy
         offset = x + self.mapWidth*y
         if self.tiles[x][y].blocked == True:
           self.tiles[x][y].blocked = False
+
+  # Create a cavity where the player will start
+  def createCavity(self):
+    for h in range(7):
+      y = self.mapHeight - 3 - h
+      for x in range(1, self.mapWidth - 1):
+        self.tiles[x][y].blocked = False
+
+    self.sealLevel()
 
   # Finds the walls in four directions
   def getAdjacentWallsSimple(self, x, y):
@@ -169,7 +201,8 @@ class CellularAutomata:
       for offset in cave:
         xp = offset % self.mapWidth
         yp = offset // self.mapWidth
-        self.tiles[xp][yp].blocked = False
+        if xp >= 1 and xp <= self.mapWidth - 2 and yp >= 1 and yp <= self.mapHeight - 2:
+          self.tiles[xp][yp].blocked = False
 
   def floodFill(self,x,y):
     '''

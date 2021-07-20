@@ -80,7 +80,6 @@ class Engine:
     # Create consoles
     self.con = libtcod.console_new(self.screen_width, self.screen_height)
     self.panel = libtcod.console_new(self.screen_width, self.panel_height)
-    self.score = libtcod.console_new(20, 6)
 
     # Define input handlers
     self.key = libtcod.Key()
