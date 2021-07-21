@@ -76,7 +76,7 @@ class Map:
           exit_x = x
         if y > player_y:
           player_y = y
-          player_x = x
+          player_x = self.map_width // 2
     exit.x = exit_x
     exit.y = exit_y
     player.x = player_x

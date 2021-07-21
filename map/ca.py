@@ -39,6 +39,9 @@ class CellularAutomata:
     # Apply cellular automata rules iteratively
     self.createCaves()
 
+    # Create a cavity where the player will start
+    self.createCavity()
+
     # Locate all the isolated caves, discarding small and large caves
     self.getCaves()
 
@@ -47,9 +50,6 @@ class CellularAutomata:
 
     # Clean up map by smoothing endges
     self.cleanUpMap()
-
-    # Create a cavity where the player will start
-    self.createCavity()
 
     return self.tiles
 
@@ -149,7 +149,7 @@ class CellularAutomata:
         dy = 0
 
       # Walk, avoiding boundaries
-      if (2 < x + dx < self.mapWidth - 3) and (2 < y + dy < self.mapHeight - 3):
+      if (1 < x + dx < self.mapWidth - 2) and (1 < y + dy < self.mapHeight - 2):
         x += dx
         y += dy
         offset = x + self.mapWidth*y
@@ -158,9 +158,20 @@ class CellularAutomata:
 
   # Create a cavity where the player will start
   def createCavity(self):
-    for h in range(7):
+    hmax = 7
+
+    # Fill in the region first
+    for h in range(hmax):
       y = self.mapHeight - 3 - h
-      for x in range(1, self.mapWidth - 1):
+      for x in range(self.mapWidth):
+        self.tiles[x][y].blocked = True
+
+    # Excavate starting location
+    for h in range(hmax):
+      y = self.mapHeight - 3 - h
+      xmin = 1 + self.mapWidth // 4 + (hmax // 2 - h)
+      xmax = 3 * self.mapWidth // 4 - 1 - (hmax // 2 - h)
+      for x in range(xmin, xmax):
         self.tiles[x][y].blocked = False
 
     self.sealLevel()
