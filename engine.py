@@ -278,6 +278,15 @@ class Engine:
     y += 1; libtcod.console_print_ex(panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'DEF: {}'.format(entity.stats.dp))
     y += 1; libtcod.console_print_ex(panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'SPD: {}'.format(entity.stats.spd))
 
+  # Fade to black
+  def fadeOut(self, nframes = 24, dt = 0.05):
+    for i in range(nframes + 1):
+      fade = 255*(nframes - i) // nframes
+      libtcod.console_set_fade(fade, libtcod.black)
+      libtcod.console_flush()
+      time.sleep(dt)
+
+  # Load custome fonts
   def load_custom_font(self):
     # Load font
     libtcod.console_set_custom_font(self.font_path, libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD, self.font_ncols, self.font_nrows)

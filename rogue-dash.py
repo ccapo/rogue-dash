@@ -20,20 +20,22 @@ def main():
       # Upload score to game server
       #engine.upload_score()
 
-      for i in range(25):
-        fade = 255*(24 - i)//24
-        libtcod.console_set_fade(fade, libtcod.black)
-        libtcod.console_flush()
-        time.sleep(0.05)
-
+      # Fade out
       if status == StatusType.QUIT:
+        engine.fadeOut(nframes = 12)
         break
+      else:
+        engine.fadeOut()
 
     # Render all entities, equipment and items
     engine.render()
 
   # Upload score to game server
   #engine.upload_score()
+
+  # Fade out
+  if libtcod.console_is_window_closed():
+    engine.fadeOut(nframes = 12)
 
 if __name__ == '__main__':
   main()
