@@ -57,12 +57,14 @@ class AI:
         if not engine.map.is_blocked(dest_x, dest_y):
           target = engine.get_entities(dest_x, dest_y)
           if target is not None:
+            owner.die()
             engine.log.add('You Died', libtcod.red)
             status = StatusType.DIED
           else:
             owner.move(dx, dy)
             owner.sym = CharType.PLAYER_UP
         else:
+          owner.die()
           engine.log.add('You Died', libtcod.red)
           status = StatusType.DIED
 
@@ -77,6 +79,7 @@ class AI:
         self.move_elapsed = 0.0
         player_died = self.moveOrAttack(owner, engine)
         if player_died == True:
+          engine.player.die()
           engine.log.add('You Died', libtcod.red)
           status = StatusType.DIED
       else:

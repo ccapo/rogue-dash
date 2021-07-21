@@ -55,6 +55,7 @@ class Entity:
     self.colour = libtcod.white
     if self.name == 'Player':
       self.colour = libtcod.light_red
+    self.stats.hp = 0
     self.name = 'corpse'
     self.sym = CharType.SKULL
     self.blocks = False

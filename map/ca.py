@@ -158,17 +158,18 @@ class CellularAutomata:
 
   # Create a cavity where the player will start
   def createCavity(self):
+    # Height of starting region
     hmax = 7
 
     # Fill in the region first
     for h in range(hmax):
-      y = self.mapHeight - 3 - h
+      y = self.mapHeight - 2 - h
       for x in range(self.mapWidth):
         self.tiles[x][y].blocked = True
 
     # Excavate starting location
     for h in range(hmax):
-      y = self.mapHeight - 3 - h
+      y = self.mapHeight - 2 - h
       xmin = 1 + self.mapWidth // 4 + (hmax // 2 - h)
       xmax = 3 * self.mapWidth // 4 - 1 - (hmax // 2 - h)
       for x in range(xmin, xmax):

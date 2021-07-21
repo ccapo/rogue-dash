@@ -24,14 +24,14 @@ class Engine:
     self.screen_height = screen_height
 
     # Define height of panel
-    self.panel_height = 8
+    self.panel_height = 9
 
     # Define stage number
     self.stage = LEVEL_START
 
     # Define message log and status panel
     self.bar_width = 15
-    self.panel_yoffset = self.screen_height - self.panel_height
+    self.panel_yoffset = self.screen_height - self.panel_height + 1
     self.message_xoffset = self.bar_width + 2
     self.message_width = self.screen_width - self.bar_width - 2
     self.message_height = self.panel_height - 2
@@ -118,6 +118,7 @@ class Engine:
     self.progress_yoffset = 0
     if reset:
       self.stage = LEVEL_START
+      self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white, 'Player', stats = Stats(spd = 12), ai = AI('player'))
     else:
       self.stage += 1
     self.entities = [self.player]
@@ -175,10 +176,12 @@ class Engine:
 
     # Set background for panel to black, and clear
     libtcod.console_set_default_background(self.con, libtcod.black)
+    libtcod.console_set_default_foreground(self.con, libtcod.white)
     libtcod.console_clear(self.con)
 
     # Set background for panel to black, and clear
     libtcod.console_set_default_background(self.panel, libtcod.black)
+    libtcod.console_set_default_foreground(self.panel, libtcod.white)
     libtcod.console_clear(self.panel)
 
     if self.state == 'menu':
@@ -258,7 +261,10 @@ class Engine:
 
     # Dash bar
     y += 1
-    dash_bar_width = int(float(entity.stats.spd*entity.ai.dash_elapsed) / 50.0 * self.bar_width)
+    dash_elapsed = 0.0
+    if entity.ai is not None:
+      dash_elapsed = entity.ai.dash_elapsed
+    dash_bar_width = int(float(entity.stats.spd*dash_elapsed) / 50.0 * self.bar_width)
 
     libtcod.console_set_default_background(panel, libtcod.darker_green)
     libtcod.console_rect(panel, x, y, self.bar_width, 1, False, libtcod.BKGND_SCREEN)
