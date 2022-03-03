@@ -1,5 +1,5 @@
 # rogue-dash
-Entry for 2021 7DRL Competition
+Entry for 2022 7DRL Competition
 
 # Requirements:
 - Python 3.6+ and pip
@@ -7,10 +7,15 @@ Entry for 2021 7DRL Competition
 - On Linux, requires libsdl2 (2.0.5+)
 
 # Installation:
-- `cd rogue-dash`
-- `python -m venv /path/to/rogue-dash/venv` (Optional)
-- `source venv/bin/activate` (Optional)
-- `pip install -r requirements.txt`
+```
+cd rogue-dash
+
+# These two steps are optional
+python -m venv /path/to/rogue-dash/venv
+source venv/bin/activate
+
+pip install -r requirements.txt
+```
 
 # Execute:
 - `python rogue-dash.py`
