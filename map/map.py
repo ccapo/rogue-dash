@@ -62,25 +62,8 @@ class Map:
     # Generate tiles using Cellular Automata method
     self.tiles = self.ca.generateLevel()
 
-    # Select player location and exit location
-    exit_y = 1.0e10
-    exit_x = None
-    player_y = -1.0e10
-    player_x = None
-    for c in self.ca.caves:
-      for o in c:
-        x = o % self.map_width
-        y = o // self.map_width
-        if y < exit_y:
-          exit_y = y
-          exit_x = x
-        if y > player_y:
-          player_y = y
-          player_x = self.map_width // 2
-    exit.x = exit_x
-    exit.y = exit_y
-    player.x = player_x
-    player.y = player_y
+    # Place player location and exit location
+    self.place_player_exit(player, exit)
 
     for c in self.ca.caves:
       # Add creatures to cave
@@ -152,6 +135,27 @@ class Map:
     for x in range(1, self.map_width - 1):
       for y in range(1, self.map_height - 1):
         self.tiles[x][y].previous_scent = self.tiles[x][y].current_scent
+
+  # Place player and exit in cave
+  def place_player_exit(self, player, exit):
+    exit_y = 1.0e10
+    exit_x = None
+    player_y = -1.0e10
+    player_x = None
+    for c in self.ca.caves:
+      for o in c:
+        x = o % self.map_width
+        y = o // self.map_width
+        if y < exit_y:
+          exit_y = y
+          exit_x = x
+        if y > player_y:
+          player_y = y
+          player_x = self.map_width // 2
+    exit.x = exit_x
+    exit.y = exit_y
+    player.x = player_x
+    player.y = player_y
 
   # Place creatures in cave
   def place_entities(self, cave, player, entities):
