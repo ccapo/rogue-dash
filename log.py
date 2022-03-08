@@ -19,3 +19,6 @@ class Log:
 
       # Add the new line as a Message object, with the text and the colour
       self.messages.append({'text': line, 'colour': colour})
+
+  def clear(self):
+    self.messages = []

@@ -1,29 +1,37 @@
 import tcod as libtcod
 
+import time
 from random import randint
-from constants import CharType, ScorecardType
+from constants import StatusType, CharType, ScorecardType
 from client import Client
 from entity.entity import Entity
 from entity.stats import Stats
 from entity.ai import AI
 from map.map import Map
 from log import Log
+from menu import Menu
+from handlers import handle_keys
+
+LEVEL_START = 16
 
 class Engine:
   def __init__(self, screen_width = 50, screen_height = 40):
+    # Define flag to display menu
+    self.state = 'menu'
+
     # Define screen width and height
     self.screen_width = screen_width
     self.screen_height = screen_height
 
     # Define height of panel
-    self.panel_height = 8
+    self.panel_height = 9
 
     # Define stage number
-    self.stage = 1
+    self.stage = LEVEL_START
 
     # Define message log and status panel
     self.bar_width = 15
-    self.panel_yoffset = self.screen_height - self.panel_height
+    self.panel_yoffset = self.screen_height - self.panel_height + 1
     self.message_xoffset = self.bar_width + 2
     self.message_width = self.screen_width - self.bar_width - 2
     self.message_height = self.panel_height - 2
@@ -36,21 +44,32 @@ class Engine:
     # Load custom font
     self.load_custom_font()
 
-    # Initialize scorecard
-    self.scorecard = [0 for i in range(ScorecardType.NRECORDS)]
-
     # HTTP client
     self.client = Client()
 
+    # Initialize scorecard
+    self.scorecard = [0 for i in range(ScorecardType.NRECORDS)]
+    self.record = self.client.read_score()
+
     # Define player and other entities
-    self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white, 'Player', stats = Stats(), ai = AI('player'))
+    self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white, 'Player', stats = Stats(spd = 12), ai = AI('player'))
     self.entities = [self.player]
 
     # Define list of items
     self.items = []
 
+    # Define list of equipment
+    self.equips = []
+
     # Define exit for current stage
     self.exit = Entity(0, 0, CharType.STAIRS_DOWN, libtcod.white, 'Exit', blocks = False)
+
+    # Create menu
+    self.menu = Menu(self.screen_width, self.screen_height)
+
+    # Create map
+    self.next_stage = False
+    self.map = Map(self.screen_width, self.screen_height, self.panel_height, self.stage)
 
     # Initialize the root console
     libtcod.console_init_root(self.screen_width, self.screen_height, 'rogue-dash (2021 7DRL)', False)
@@ -61,12 +80,6 @@ class Engine:
     # Create consoles
     self.con = libtcod.console_new(self.screen_width, self.screen_height)
     self.panel = libtcod.console_new(self.screen_width, self.panel_height)
-    self.score = libtcod.console_new(20, 6)
-
-    # Create map
-    self.next_stage = False
-    self.map = Map(self.screen_width, self.screen_height, self.panel_height, self.stage)
-    self.map.generate(self.entities, self.items, self.exit)
 
     # Define input handlers
     self.key = libtcod.Key()
@@ -74,7 +87,10 @@ class Engine:
 
   # Upload score to game server
   def upload_score(self):
-    self.client.upload_score(self.scorecard)
+    if any([s > 0 for s in self.scorecard]):
+      self.client.upload_score(self.scorecard)
+      self.scorecard = [0 for i in range(ScorecardType.NRECORDS)]
+      self.record = self.client.read_score()
 
   # Return blocking entity at location if it exists
   def get_entities(self, dx, dy):
@@ -96,104 +112,187 @@ class Engine:
       return self.exit
     return None
 
+  # Generate a new stage
+  def generateStage(self, reset = False):
+    self.next_stage = False
+    self.progress_yoffset = 0
+    if reset:
+      self.stage = LEVEL_START
+      self.player = Entity(0, 0, CharType.PLAYER_RIGHT, libtcod.white, 'Player', stats = Stats(spd = 12), ai = AI('player'))
+    else:
+      self.stage += 1
+    self.entities = [self.player]
+    self.items = []
+    self.equips = []
+    self.exit = Entity(0, 0, CharType.STAIRS_DOWN, libtcod.white, 'Exit', blocks = False)
+    self.map = Map(self.screen_width, self.screen_height, self.panel_height, self.stage)
+    self.map.generate(self.entities, self.items, self.equips, self.exit)
+    if reset:
+      self.log.clear()
+      self.log.add('Welcome to rogue-dash!', libtcod.green)
+    else:
+      self.log.add("Welcome to stage {}!".format(self.stage), libtcod.green)
+
   # Update all entities and the map
   def update(self, dt):
+    status = StatusType.OK
     libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS, self.key, self.mouse)
 
-    # Update map
-    self.map.update(self.player, dt)
+    if self.key.vk == libtcod.KEY_DELETE:
+      libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
 
-    # Update all entities
-    status = True
-    self.next_stage = False
-    for entity in self.entities:
-      status = status and entity.update(self)
+    if self.state == 'menu':
+      self.menu.update(self.record)
 
-    # If the player uses the exit, advance to the next stage
-    if self.next_stage == True:
-      self.next_stage == False
-      self.stage += 1
-      self.entities = [self.player]
-      self.items = []
-      self.exit = Entity(0, 0, CharType.STAIRS_DOWN, libtcod.white, 'Exit', blocks = False)
-      self.map = Map(self.screen_width, self.screen_height, self.panel_height, self.stage)
-      self.map.generate(self.entities, self.items, self.exit)
-      self.log.add("Welcome to stage {}!".format(self.stage), libtcod.green)
+      if self.key.vk == libtcod.KEY_ENTER:
+        self.state = 'game'
+        self.generateStage(reset = True)
+        status = StatusType.DIED
+      elif self.key.vk == libtcod.KEY_ESCAPE:
+        status = StatusType.QUIT
+    else:
+      # If the player uses the exit, advance to the next stage
+      if self.next_stage:
+        self.generateStage()
+
+      # Update map
+      self.map.update(self.player, dt)
+
+      # Update all entities
+      for entity in self.entities:
+        update_status = entity.update(self)
+        if update_status > 0:
+          status = update_status
+
+      if status == StatusType.DIED:
+        self.render()
+        self.state = 'menu'
 
     return status
 
   # Render all items and entities
   def render(self):
-    # Draw all the tiles visble from the camera
-    self.map.render(self.con)
+    libtcod.console_set_fade(255, libtcod.black)
 
-    # Draw exit
-    self.exit.render(self.con, self.map.camera_yoffset)
-
-    # Draw all items and equipment
-    for item in self.items:
-      item.render(self.con, self.map.camera_yoffset)
-
-    # Draw all entities in reverse order
-    for entity in reversed(self.entities):
-      entity.render(self.con, self.map.camera_yoffset)
-
-    # Blit con to root console
-    libtcod.console_blit(self.con, 0, 0, self.screen_width, self.screen_height, 0, 0, 0)
+    # Set background for panel to black, and clear
+    libtcod.console_set_default_background(self.con, libtcod.black)
+    libtcod.console_set_default_foreground(self.con, libtcod.white)
+    libtcod.console_clear(self.con)
 
     # Set background for panel to black, and clear
     libtcod.console_set_default_background(self.panel, libtcod.black)
+    libtcod.console_set_default_foreground(self.panel, libtcod.white)
     libtcod.console_clear(self.panel)
 
-    # Print the game messages, one line at a time
-    y = 1
-    for message in self.log.messages:
-      libtcod.console_set_default_foreground(self.panel, message['colour'])
-      libtcod.console_print_ex(self.panel, self.log.x, y, libtcod.BKGND_NONE, libtcod.LEFT, message['text'])
-      y += 1
+    if self.state == 'menu':
+      self.menu.render(self.con)
 
-    # Render health bar and player stats
-    self.render_stats(1, 1, self.player.stats)
+      # Blit con to root console
+      libtcod.console_blit(self.con, 0, 0, self.screen_width, self.screen_height, 0, 0, 0)
 
-    # Blit panel to root console
-    libtcod.console_blit(self.panel, 0, 0, self.screen_width, self.panel_height, 0, 0, self.panel_yoffset)
+      # Flush buffer to the root console
+      libtcod.console_flush()
+    else:
+      # Draw all the tiles visble from the camera
+      self.map.render(self.con)
 
-    # Flush buffer to the root console
-    libtcod.console_flush()
+      # Draw exit
+      self.exit.render(self.con, self.map.camera_yoffset)
 
-    # Clear all entities
-    for entity in self.entities:
-      entity.clear(self.con, self.map.camera_yoffset)
+      # Draw all items
+      for item in self.items:
+        item.render(self.con, self.map.camera_yoffset)
 
-    # Clear all items
-    for item in self.items:
-      item.clear(self.con, self.map.camera_yoffset)
+      # Draw all equipment
+      for equip in self.equips:
+        equip.render(self.con, self.map.camera_yoffset)
 
-    # Clear exit
-    self.exit.clear(self.con, self.map.camera_yoffset)
+      # Draw all entities in reverse order
+      for entity in reversed(self.entities):
+        entity.render(self.con, self.map.camera_yoffset)
+
+      # Blit con to root console
+      libtcod.console_blit(self.con, 0, 0, self.screen_width, self.screen_height, 0, 0, 0)
+
+      # Print the game messages, one line at a time
+      y = 1
+      for message in self.log.messages:
+        libtcod.console_set_default_foreground(self.panel, message['colour'])
+        libtcod.console_print_ex(self.panel, self.log.x, y, libtcod.BKGND_NONE, libtcod.LEFT, message['text'])
+        y += 1
+
+      # Render health bar and player stats
+      self.render_stats(self.panel, 1, 1, self.player)
+
+      # Blit panel to root console
+      libtcod.console_blit(self.panel, 0, 0, self.screen_width, self.panel_height, 0, 0, self.panel_yoffset)
+
+      # Flush buffer to the root console
+      libtcod.console_flush()
+
+      # Clear all entities
+      for entity in self.entities:
+        entity.clear(self.con, self.map.camera_yoffset)
+
+      # Clear all equipment
+      for equip in self.equips:
+        equip.clear(self.con, self.map.camera_yoffset)
+
+      # Clear all items
+      for item in self.items:
+        item.clear(self.con, self.map.camera_yoffset)
+
+      # Clear exit
+      self.exit.clear(self.con, self.map.camera_yoffset)
 
   # Render bar in panel
-  def render_stats(self, x, y, stats):
-    bar_width = int(float(stats.hp) / stats.hpmax * self.bar_width)
+  def render_stats(self, panel, x, y, entity):
+    hp_bar_width = int(float(entity.stats.hp) / entity.stats.hpmax * self.bar_width)
 
-    libtcod.console_set_default_background(self.panel, libtcod.darker_red)
-    libtcod.console_rect(self.panel, x, y, self.bar_width, 1, False, libtcod.BKGND_SCREEN)
+    libtcod.console_set_default_background(panel, libtcod.darker_red)
+    libtcod.console_rect(panel, x, y, self.bar_width, 1, False, libtcod.BKGND_SCREEN)
 
-    libtcod.console_set_default_background(self.panel, libtcod.light_red)
-    if bar_width > 0:
-      libtcod.console_rect(self.panel, x, y, bar_width, 1, False, libtcod.BKGND_SCREEN)
+    libtcod.console_set_default_background(panel, libtcod.light_red)
+    if hp_bar_width > 0:
+      libtcod.console_rect(panel, x, y, hp_bar_width, 1, False, libtcod.BKGND_SCREEN)
 
-    libtcod.console_set_default_foreground(self.panel, libtcod.white)
-    libtcod.console_print_ex(self.panel, int(x + self.bar_width / 2), y, libtcod.BKGND_NONE, libtcod.CENTER, 'HP: {}/{}'.format(stats.hp, stats.hpmax))
+    libtcod.console_set_default_foreground(panel, libtcod.white)
+    libtcod.console_print_ex(panel, int(x + self.bar_width / 2), y, libtcod.BKGND_NONE, libtcod.CENTER, 'HP: {}/{}'.format(entity.stats.hp, entity.stats.hpmax))
 
-    libtcod.console_set_default_background(self.panel, libtcod.black)
-    libtcod.console_set_default_foreground(self.panel, libtcod.white)
+    # Dash bar
+    y += 1
+    dash_elapsed = 0.0
+    if entity.ai is not None:
+      dash_elapsed = entity.ai.dash_elapsed
+    dash_bar_width = int(float(entity.stats.spd*dash_elapsed) / 50.0 * self.bar_width)
 
-    y = 2
-    y += 1; libtcod.console_print_ex(self.panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'ATK: {}'.format(stats.ap))
-    y += 1; libtcod.console_print_ex(self.panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'DEF: {}'.format(stats.dp))
-    y += 1; libtcod.console_print_ex(self.panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'SPD: {}'.format(stats.spd))
+    libtcod.console_set_default_background(panel, libtcod.darker_green)
+    libtcod.console_rect(panel, x, y, self.bar_width, 1, False, libtcod.BKGND_SCREEN)
 
+    libtcod.console_set_default_background(panel, libtcod.light_green)
+    if dash_bar_width > 0:
+      libtcod.console_rect(panel, x, y, dash_bar_width, 1, False, libtcod.BKGND_SCREEN)
+
+    libtcod.console_set_default_foreground(panel, libtcod.white)
+    libtcod.console_print_ex(panel, int(x + self.bar_width / 2), y, libtcod.BKGND_NONE, libtcod.CENTER, 'Dash')
+
+    libtcod.console_set_default_background(panel, libtcod.black)
+    libtcod.console_set_default_foreground(panel, libtcod.white)
+
+    y += 1
+    y += 1; libtcod.console_print_ex(panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'ATK: {}'.format(entity.stats.ap))
+    y += 1; libtcod.console_print_ex(panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'DEF: {}'.format(entity.stats.dp))
+    y += 1; libtcod.console_print_ex(panel, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, 'SPD: {}'.format(entity.stats.spd))
+
+  # Fade to black
+  def fadeOut(self, nframes = 24, dt = 0.05):
+    for i in range(nframes + 1):
+      fade = 255*(nframes - i) // nframes
+      libtcod.console_set_fade(fade, libtcod.black)
+      libtcod.console_flush()
+      time.sleep(dt)
+
+  # Load custome fonts
   def load_custom_font(self):
     # Load font
     libtcod.console_set_custom_font(self.font_path, libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD, self.font_ncols, self.font_nrows)

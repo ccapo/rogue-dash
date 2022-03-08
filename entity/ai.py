@@ -1,52 +1,53 @@
 from random import randint
 import tcod as libtcod
 from handlers import handle_keys
-from constants import CharType
+from constants import StatusType, CharType
 
 class AI:
   def __init__(self, type = None, scent_threshold = 0.0625):
     self.type = type
     self.scent_threshold = scent_threshold
-    self.elapsed = 0.0
+    self.move_elapsed = 0.0
+    self.dash_elapsed = 0.0
+    self.consume_elapsed = 0.0
 
   def update(self, owner, engine):
-    status = True
+    status = StatusType.OK
 
     if self.type == 'player':
       action = handle_keys(engine.key)
 
       move = action.get('move')
-      act = action.get('action')
-      exit = action.get('exit')
-      fullscreen = action.get('fullscreen')
+      dash = action.get('dash')
+      stairs = action.get('stairs')
 
-      if owner.stats.spd*self.elapsed >= 1.0:
+      if owner.stats.spd*self.move_elapsed >= 1.0:
         if move:
-          self.elapsed = 0.0
+          self.move_elapsed = 0.0
           dx, dy = move
-          dest_x = owner.x + dx
-          dest_y = owner.y + dy
-          if not engine.map.is_blocked(dest_x, dest_y):
-            target = engine.get_entities(dest_x, dest_y)
-            if target is not None:
-              owner.attack(target, engine)
-            else:
-              owner.move(dx, dy)
-              if dx == 0 and dy == -1:
-                owner.sym = CharType.PLAYER_UP
-              elif dx == -1 and dy == 0:
-                owner.sym = CharType.PLAYER_LEFT
-              elif dx == 0 and dy == 1:
-                owner.sym = CharType.PLAYER_DOWN
-              elif dx == 1 and dy == 0:
-                owner.sym = CharType.PLAYER_RIGHT
-              obj = engine.get_items(owner.x, owner.y)
-              if obj is not None:
-                used = obj.use(owner)
-                if used == True:
-                  engine.items.remove(obj)
+          self.playerUpdate(owner, engine, dx, dy)
       else:
-        self.elapsed += libtcod.sys_get_last_frame_length()
+        self.move_elapsed += libtcod.sys_get_last_frame_length()
+
+      # Dash
+      if owner.stats.spd*self.dash_elapsed >= 50.0:
+        if dash:
+          self.dash_elapsed = 0.0
+          dx = 0
+          dy = 0
+          if owner.sym == CharType.PLAYER_UP:
+            dy = -1
+          elif owner.sym == CharType.PLAYER_LEFT:
+            dx = -1
+          elif owner.sym == CharType.PLAYER_DOWN:
+            dy = 1
+          elif owner.sym == CharType.PLAYER_RIGHT:
+            dx = 1
+
+          for i in range(5):
+            if not self.playerUpdate(owner, engine, dx, dy): break
+      else:
+        self.dash_elapsed += libtcod.sys_get_last_frame_length()
 
       # If player is at bottom edge of visible map, push them up
       if owner.y > engine.map.camera_height + engine.map.camera_yoffset - 1:
@@ -56,34 +57,33 @@ class AI:
         if not engine.map.is_blocked(dest_x, dest_y):
           target = engine.get_entities(dest_x, dest_y)
           if target is not None:
+            owner.die()
             engine.log.add('You Died', libtcod.red)
-            status = False
+            status = StatusType.DIED
           else:
             owner.move(dx, dy)
             owner.sym = CharType.PLAYER_UP
         else:
+          owner.die()
           engine.log.add('You Died', libtcod.red)
-          status = False
+          status = StatusType.DIED
 
-      if act:
-        exit = engine.get_exit(owner.x, owner.y)
-        if exit is not None:
+      if stairs:
+        stairs = engine.get_exit(owner.x, owner.y)
+        if stairs is not None:
           engine.next_stage = True
+          status = StatusType.OK
 
-      if exit:
-        status = False
-
-      if fullscreen:
-        libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
     elif self.type == 'creature':
-      if owner.stats.spd*self.elapsed >= 1.0:
-        self.elapsed = 0.0
+      if owner.stats.spd*self.move_elapsed >= 1.0:
+        self.move_elapsed = 0.0
         player_died = self.moveOrAttack(owner, engine)
         if player_died == True:
+          engine.player.die()
           engine.log.add('You Died', libtcod.red)
-          status = False
+          status = StatusType.DIED
       else:
-        self.elapsed += libtcod.sys_get_last_frame_length()
+        self.move_elapsed += libtcod.sys_get_last_frame_length()
     else:
       print('Unreognized AI type: ' + self.type)
 
@@ -128,4 +128,30 @@ class AI:
         target = engine.get_entities(dest_x, dest_y)
         if target is None:
           owner.move(dx[iz], dy[iz])
+      return False
+
+  def playerUpdate(self, owner, engine, dx, dy):
+    dest_x = owner.x + dx
+    dest_y = owner.y + dy
+    if not engine.map.is_blocked(dest_x, dest_y):
+      target = engine.get_entities(dest_x, dest_y)
+      if target is not None:
+        owner.attack(target, engine)
+      else:
+        owner.move(dx, dy)
+        if dx == 0 and dy == -1:
+          owner.sym = CharType.PLAYER_UP
+        elif dx == -1 and dy == 0:
+          owner.sym = CharType.PLAYER_LEFT
+        elif dx == 0 and dy == 1:
+          owner.sym = CharType.PLAYER_DOWN
+        elif dx == 1 and dy == 0:
+          owner.sym = CharType.PLAYER_RIGHT
+        obj = engine.get_items(owner.x, owner.y)
+        if obj is not None:
+          used = obj.use(owner)
+          if used == True:
+            engine.items.remove(obj)
+      return True
+    else:
       return False

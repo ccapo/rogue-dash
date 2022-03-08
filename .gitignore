@@ -129,3 +129,5 @@ dmypy.json
 .pyre/
 
 data/credentials.json
+data/score.json
+test/

@@ -1,15 +1,12 @@
 class Tile:
   """
-  A tile on a map. It may or may not be blocked, and may or may not block sight.
+  A tile on a map.
+  It may or may not be blocked.
+  It has the player's past and present scent value.
+  It also has a speed modifier
   """
-  def __init__(self, blocked, block_sight = None):
+  def __init__(self, blocked = True, speed_modifier = 1.0):
     self.blocked = blocked
     self.previous_scent = 0.0
     self.current_scent = 0.0
-    self.speed_modifier = 1.0
-    
-    # By default, if a tile is blocked, it also blocks sight
-    if block_sight is None:
-      block_sight = blocked
-    
-    self.block_sight = block_sight
+    self.speed_modifier = speed_modifier

@@ -25,3 +25,5 @@ pip install -r requirements.txt
 - ENTER key to use stairs
 - ESC key or close window to quit
 - DEL key to toggle fullscreen
+- Items and equipment are picked up automatically.
+- Items are consumed immediately, and equipment is replaced.
